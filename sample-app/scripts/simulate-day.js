@@ -57,7 +57,10 @@ for (let n = 1; n <= ORDERS; n++) {
   expected.fees += feeKobo;
 }
 
-const sum = (accounts) => accounts.reduce((s, a) => s + ledger.balance(a), 0);
+const sum = (accounts) =>
+  typeof ledger.balanceKobo === 'function'
+    ? accounts.reduce((s, a) => s + ledger.balanceKobo(a), 0) / 100
+    : accounts.reduce((s, a) => s + ledger.balance(a), 0);
 const actual = {
   customers: -sum(CUSTOMERS),
   merchants: sum(MERCHANTS),
