@@ -5,9 +5,15 @@ export class PaymentService {
   constructor(ledger) {
     this.ledger = ledger;
     this.payments = new Map();
+    this.idempotencyKeys = new Map();  // idempotencyKey → original charge result
   }
 
   charge({ paymentId, customer, merchant, items, idempotencyKey }) {
+    // Rule 5: a retry with the same idempotency key must not create a second charge.
+    if (idempotencyKey && this.idempotencyKeys.has(idempotencyKey)) {
+      return this.idempotencyKeys.get(idempotencyKey);
+    }
+
     const amount = chargeTotal(items);
     const fee = amount * FEE_RATE;
 
@@ -15,7 +21,9 @@ export class PaymentService {
     this.ledger.post({ ref: paymentId, from: 'clearing', to: 'platform_fees', amount: fee, memo: 'processing fee' });
 
     this.payments.set(paymentId, { paymentId, customer, merchant, amount, fee, idempotencyKey, refunded: 0, settled: false });
-    return { paymentId, amount, fee };
+    const result = { paymentId, amount, fee };
+    if (idempotencyKey) this.idempotencyKeys.set(idempotencyKey, result);
+    return result;
   }
 
   settle(paymentId) {

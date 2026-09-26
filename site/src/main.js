@@ -18,3 +18,11 @@ document.getElementById('close').addEventListener('click', () => setOpen(false))
 document.getElementById('scrim').addEventListener('click', () => setOpen(false));
 drawer.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+
+// Reveal whole sections and rows as they scroll into view (skill section 15)
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }
+}, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+document.querySelectorAll('.r').forEach((el) => io.observe(el));
