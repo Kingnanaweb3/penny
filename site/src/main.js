@@ -1,10 +1,10 @@
-// Nav turns solid after 24px of scroll
+// ---------- Nav: solid after 24px of scroll ----------
 const nav = document.getElementById('nav');
 const onScroll = () => nav.classList.toggle('stuck', window.scrollY > 24);
 onScroll();
 window.addEventListener('scroll', onScroll, { passive: true });
 
-// Mobile drawer: opens from the right, closes on Escape, scrim or link
+// ---------- Mobile drawer ----------
 const body = document.body;
 const burger = document.getElementById('burger');
 const drawer = document.getElementById('drawer');
@@ -19,15 +19,30 @@ document.getElementById('scrim').addEventListener('click', () => setOpen(false))
 drawer.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
 
-// Reveal whole sections and rows as they scroll into view (skill section 15)
+// ---------- Reveal on scroll (design system section 15) ----------
+// Header and body of a section stagger against each other; cards inside do not.
+document.querySelectorAll('section').forEach((sec) => {
+  sec.querySelectorAll(':scope .r').forEach((el, i) => { if (i === 1) el.classList.add('r-1'); if (i >= 2) el.classList.add('r-2'); });
+});
 const io = new IntersectionObserver((entries) => {
   for (const e of entries) {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }
-}, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+}, { rootMargin: '0px 0px -10% 0px', threshold: 0.06 });
 document.querySelectorAll('.r').forEach((el) => io.observe(el));
 
-// Findings picker: every number comes from penny-report/03-findings.md
+// ---------- The audit: after value ----------
+// Set this from Penny's Phase 5 trial balance. Leave null until it has actually been observed.
+const AFTER_TOTAL = null; // for example '$0.00'
+if (AFTER_TOTAL !== null) {
+  const box = document.getElementById('after-box');
+  box.classList.remove('pending');
+  box.classList.add('good');
+  document.getElementById('after-value').textContent = AFTER_TOTAL;
+  document.getElementById('after-note').textContent = 'Total discrepancy after every fix, from the same reconciliation script.';
+}
+
+// ---------- Findings picker (numbers from penny-report/03-findings.md) ----------
 const FINDINGS = [
   { id: 'P1', title: 'Float money', sev: 'Low', rule: 'Rule 1', imp: 'Under $0.05', who: 'Every account',
     desc: 'Money was stored as fractional numbers, so amounts carried stray fractions of a cent.' },
@@ -44,25 +59,17 @@ const FINDINGS = [
   { id: 'P7', title: 'Clearing never zero', sev: 'High', rule: 'Rule 7', imp: '$3,815.82', who: 'Platform',
     desc: 'The holding account kept a balance after settlement, caused by P3 and P4 together.' },
 ];
-
 const picker = document.getElementById('picker');
 if (picker) {
   const items = [...picker.querySelectorAll('li')];
   const $ = (id) => document.getElementById(id);
   const select = (sel) => {
-    items.forEach((li, i) => {
-      li.dataset.d = String(Math.abs(i - sel));
-      li.setAttribute('aria-selected', String(i === sel));
-    });
+    items.forEach((li, i) => { li.dataset.d = String(Math.abs(i - sel)); li.setAttribute('aria-selected', String(i === sel)); });
     const f = FINDINGS[sel];
-    $('d-id').textContent = f.id;
-    $('d-title').textContent = f.title;
-    $('d-sev').textContent = f.sev;
-    $('d-sev').className = `sev ${f.sev}`;
-    $('d-desc').textContent = f.desc;
-    $('d-rule').textContent = f.rule;
-    $('d-imp').textContent = f.imp;
-    $('d-who').textContent = f.who;
+    $('d-id').textContent = f.id; $('d-title').textContent = f.title;
+    $('d-sev').textContent = f.sev; $('d-sev').className = `sev ${f.sev}`;
+    $('d-desc').textContent = f.desc; $('d-rule').textContent = f.rule;
+    $('d-imp').textContent = f.imp; $('d-who').textContent = f.who;
   };
   items.forEach((li, i) => {
     li.tabIndex = 0;

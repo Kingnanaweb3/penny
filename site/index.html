@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FAF8F4">
   <title>Penny: your tests pass, your books don't</title>
   <meta name="description" content="Penny is a money auditor inside IBM Bob. She proves every discrepancy in your payment code with a failing test, fixes it, and proves the books balance.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,13 +15,12 @@
 
   <header class="nav" id="nav">
     <div class="nav-inner">
-      <a href="#top" class="brand" aria-label="Penny home">
-        <span class="coin" aria-hidden="true">P</span>Penny
-      </a>
+      <a href="#top" class="brand" aria-label="Penny home"><span class="coin" aria-hidden="true">P</span>Penny</a>
       <nav class="nav-links" aria-label="Main">
         <a href="#how">How it works</a>
         <a href="#findings">Findings</a>
         <a href="#bob">Built on Bob</a>
+        <a href="#limits">Limits</a>
         <a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <a href="#audit" class="nav-cta">See the audit</a>
@@ -34,11 +34,14 @@
     <a href="#how">How it works</a>
     <a href="#findings">Findings</a>
     <a href="#bob">Built on Bob</a>
+    <a href="#limits">Limits</a>
     <a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a>
     <a href="#audit" class="pill-lg solid">See the audit</a>
   </aside>
 
   <main id="top">
+
+    <!-- ================= HERO ================= -->
     <section class="hero" aria-labelledby="hero-title">
       <img class="hero-img" src="/hero.jpg" alt="" fetchpriority="high">
       <div class="hero-copy">
@@ -49,18 +52,34 @@
         <p class="lead rise d1">A money auditor that lives inside IBM Bob. She proves every discrepancy in your payment code with a failing test, fixes it, and proves the books balance.</p>
         <div class="ctas rise d2">
           <a href="#audit" class="pill-lg solid">See the audit</a>
-          <a href="https://github.com/Kingnanaweb3/penny" class="pill-lg ghost mono-pill" target="_blank" rel="noopener"><span class="k">Built on</span> IBM Bob 2.0</a>
+          <a href="https://github.com/Kingnanaweb3/penny" class="pill-lg ghost" target="_blank" rel="noopener">Read the code</a>
         </div>
       </div>
     </section>
+
+    <!-- ================= PROOF BAND ================= -->
+    <section class="s proof-sec" aria-label="The audit in numbers">
+      <div class="wrap">
+        <p class="proof-kicker r">One simulated day at ShopLedger, a sample payments app, 500 orders</p>
+        <div class="proof r">
+          <div><b class="num">$43,627.98</b><p>Missing from the books before Penny</p></div>
+          <div><b class="num">5 of 5</b><p>Original tests passing while the books were off</p></div>
+          <div><b class="num">0 of 7</b><p>Fee schedule rules enforced at audit</p></div>
+          <div><b class="num">7</b><p>Findings, each proven with a failing test</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW IT WORKS ================= -->
     <section class="s feat" id="how" aria-labelledby="how-title">
       <div class="wrap">
-        <div class="feat-head r">
-          <div class="eyebrow"><i></i><span>How Penny works</span></div>
-          <h2 id="how-title">An auditor's method, run inside your editor.</h2>
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">How it works</span>
+            <h2 id="how-title">An auditor's method, run inside your editor.</h2>
+          </div>
         </div>
 
-        <!-- Row 1: spec check -->
         <div class="feat-row r">
           <div class="stage" aria-hidden="true">
             <div class="glow"></div>
@@ -79,10 +98,7 @@
                 </ul>
               </div>
             </div>
-            <div class="chip chip-br">
-              <span class="k mono">Enforced at audit</span>
-              <span class="v num">0 of 7</span>
-            </div>
+            <div class="chip chip-br"><span class="k mono">Enforced at audit</span><span class="v num">0 of 7</span></div>
             <div class="badge badge-r"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg></div>
           </div>
           <div class="feat-copy">
@@ -95,28 +111,24 @@
           </div>
         </div>
 
-        <!-- Row 2: failing test first -->
         <div class="feat-row flip r">
           <div class="stage" aria-hidden="true">
             <div class="glow"></div>
-            <div class="mock tilt-r">
-              <div class="mock-bar"><i></i><i></i><i></i><span class="mono">p2-rounding-drift.test.js</span></div>
+            <div class="mock term-mock tilt-r">
+              <div class="mock-bar"><i></i><i></i><i></i><span class="mono">p3-idempotency.test.js</span></div>
               <div class="mock-body term mono">
-                <div class="ln dim">$ node --test tests/penny/p2-rounding-drift.test.js</div>
-                <div class="ln bad">✖ charge equals receipt</div>
-                <div class="ln dim">&nbsp;&nbsp;expected 322.51</div>
-                <div class="ln dim">&nbsp;&nbsp;actual&nbsp;&nbsp;&nbsp;322.52</div>
+                <div class="ln dim">$ node --test tests/penny/p3-idempotency.test.js</div>
+                <div class="ln bad">✖ customer debited once on retry</div>
+                <div class="ln dim">&nbsp;&nbsp;expected 107.50</div>
+                <div class="ln dim">&nbsp;&nbsp;actual&nbsp;&nbsp;&nbsp;215.00</div>
                 <div class="ln sep"></div>
-                <div class="ln dim">$ fix: tax calculated once, in whole cents</div>
+                <div class="ln dim"># fix: remember each idempotency key</div>
                 <div class="ln sep"></div>
-                <div class="ln good">✔ charge equals receipt</div>
-                <div class="ln dim">&nbsp;&nbsp;tests 9 &nbsp;pass 9 &nbsp;fail 0</div>
+                <div class="ln good">✔ customer debited once on retry</div>
+                <div class="ln dim">&nbsp;&nbsp;tests 12 &nbsp;pass 12 &nbsp;fail 0</div>
               </div>
             </div>
-            <div class="chip chip-tl">
-              <span class="k mono">Order</span>
-              <span class="v small">Red, then green</span>
-            </div>
+            <div class="chip chip-tl"><span class="k mono">Order</span><span class="v small">Red, then green</span></div>
             <div class="badge badge-l"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12l4 4L19 6"/></svg></div>
           </div>
           <div class="feat-copy">
@@ -129,7 +141,6 @@
           </div>
         </div>
 
-        <!-- Row 3: decomposition -->
         <div class="feat-row r">
           <div class="stage" aria-hidden="true">
             <div class="glow"></div>
@@ -145,10 +156,7 @@
                 </div>
               </div>
             </div>
-            <div class="chip chip-br">
-              <span class="k mono">Unexplained</span>
-              <span class="v num good">$0.00</span>
-            </div>
+            <div class="chip chip-br"><span class="k mono">Unexplained</span><span class="v num good">$0.00</span></div>
             <div class="badge badge-r"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
           </div>
           <div class="feat-copy">
@@ -161,13 +169,48 @@
         </div>
       </div>
     </section>
+
+    <!-- ================= THE ARITHMETIC ================= -->
+    <section class="s sum-sec" id="audit" aria-labelledby="audit-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">The audit</span>
+            <h2 id="audit-title">The whole story, in one line.</h2>
+            <p class="sub">Same simulated day, same 500 orders, same reconciliation script. The only thing that changed is the code Penny fixed.</p>
+          </div>
+        </div>
+        <div class="sum r">
+          <div class="sum-box warn">
+            <span class="k">Before Penny</span>
+            <b class="v num">$43,627.98</b>
+            <p class="n">Off across four accounts, with every original test passing.</p>
+          </div>
+          <div class="sum-op" aria-hidden="true">&minus;</div>
+          <div class="sum-box">
+            <span class="k">Seven proven fixes</span>
+            <b class="v num">7</b>
+            <p class="n">Each one a failing test first, then the smallest change that makes it pass.</p>
+          </div>
+          <div class="sum-op" aria-hidden="true">=</div>
+          <!-- AFTER VALUE: replace "Pending" with the real total from Penny's Phase 5 trial balance -->
+          <div class="sum-box pending" id="after-box">
+            <span class="k">After Penny</span>
+            <b class="v num" id="after-value">Pending</b>
+            <p class="n" id="after-note">Filled in from Penny's final trial balance, not before.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FINDINGS ================= -->
     <section class="s findings" id="findings" aria-labelledby="findings-title">
       <div class="wrap">
         <div class="sec-top r">
           <div>
             <span class="chip-label">Findings</span>
             <h2 id="findings-title">Seven findings. Every one proven.</h2>
-            <p class="sub">From Penny's audit of ShopLedger, a sample payments app with deliberately seeded bugs, over one simulated day of 500 orders.</p>
+            <p class="sub">From Penny's audit of ShopLedger, a sample payments app with deliberately seeded bugs. Pick one to see its impact.</p>
           </div>
           <a class="explore" href="https://github.com/Kingnanaweb3/penny/blob/main/penny-report/03-findings.md" target="_blank" rel="noopener">Explore <span aria-hidden="true">&rsaquo;</span></a>
         </div>
@@ -175,19 +218,18 @@
         <div class="fnd r">
           <div class="picker-panel">
             <ul class="picker" id="picker" role="listbox" aria-label="Findings">
-              <li role="option" data-i="0"><span class="pid mono">P1</span>Float money</li>
-              <li role="option" data-i="1"><span class="pid mono">P2</span>Rounding drift</li>
-              <li role="option" data-i="2"><span class="pid mono">P3</span>Retries charged twice</li>
-              <li role="option" data-i="3"><span class="pid mono">P4</span>Fee taken twice</li>
-              <li role="option" data-i="4"><span class="pid mono">P5</span>Fee cap missing</li>
-              <li role="option" data-i="5"><span class="pid mono">P6</span>Refunds over the charge</li>
-              <li role="option" data-i="6"><span class="pid mono">P7</span>Clearing never zero</li>
+              <li role="option"><span class="pid mono">P1</span>Float money</li>
+              <li role="option"><span class="pid mono">P2</span>Rounding drift</li>
+              <li role="option"><span class="pid mono">P3</span>Retries charged twice</li>
+              <li role="option"><span class="pid mono">P4</span>Fee taken twice</li>
+              <li role="option"><span class="pid mono">P5</span>Fee cap missing</li>
+              <li role="option"><span class="pid mono">P6</span>Refunds over the charge</li>
+              <li role="option"><span class="pid mono">P7</span>Clearing never zero</li>
             </ul>
           </div>
-
           <div class="fnd-side">
-            <div class="detail" id="detail" aria-live="polite">
-              <div class="d-head"><span class="d-id mono" id="d-id">P3</span><span id="d-title">Retries charged twice</span><b class="sev" id="d-sev">Critical</b></div>
+            <div class="detail" aria-live="polite">
+              <div class="d-head"><span class="d-id mono" id="d-id">P3</span><span id="d-title">Retries charged twice</span><b class="sev Critical" id="d-sev">Critical</b></div>
               <p id="d-desc">A retried charge with the same idempotency key debited the customer a second time.</p>
               <dl>
                 <div><dt>Rule broken</dt><dd id="d-rule">Rule 5</dd></div>
@@ -206,6 +248,7 @@
       </div>
     </section>
 
+    <!-- ================= BUILT ON BOB ================= -->
     <section class="s bob-band" id="bob" aria-labelledby="bob-title">
       <div class="wrap">
         <div class="sec-top r">
@@ -215,7 +258,6 @@
           </div>
           <a class="explore" href="https://github.com/Kingnanaweb3/penny/tree/main/.bob" target="_blank" rel="noopener">Explore <span aria-hidden="true">&rsaquo;</span></a>
         </div>
-
         <div class="hub r" aria-hidden="true">
           <div class="node n-top">Custom mode</div>
           <div class="node n-left">Mode rules</div>
@@ -223,7 +265,6 @@
           <div class="node n-right">Five skills</div>
           <div class="node n-bottom">Reads documents</div>
         </div>
-
         <div class="hub-legend r">
           <div><b>Custom mode</b><p>A Bob mode with her own role, five phases, and tool access limited to reading, editing and running tests.</p></div>
           <div><b>Mode rules</b><p>Active only in Penny mode. She may never edit the fee schedule, and every fix needs a failing test first.</p></div>
@@ -233,10 +274,68 @@
       </div>
     </section>
 
+    <!-- ================= HONEST LIMITS ================= -->
+    <section class="s limits-sec" id="limits" aria-labelledby="limits-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">Limits</span>
+            <h2 id="limits-title">What Penny does not do yet.</h2>
+            <p class="sub">Said plainly, so you can judge the rest of the page with it in mind.</p>
+          </div>
+        </div>
+        <div class="limits r">
+          <div><b>The bugs were seeded</b><p>ShopLedger's money bugs were planted on purpose to mirror common real failures. Penny has not yet been run against a production payments codebase.</p></div>
+          <div><b>A simple ledger</b><p>The sample app keeps its ledger in memory. There is no database, no concurrency and no real payment provider in the loop.</p></div>
+          <div><b>It needs written rules</b><p>Policy checks depend on a fee schedule document. Without one, Penny can still catch float and rounding bugs, but not broken business rules.</p></div>
+          <div><b>Wired to this repo</b><p>Penny's rules point at ShopLedger's file paths. Using her on another codebase today means editing those paths in the .bob folder.</p></div>
+          <div><b>Not a human auditor</b><p>Penny produces evidence for an engineer or finance lead to review. She does not sign off on anyone's books.</p></div>
+        </div>
+      </div>
+    </section>
 
-
-    <div class="next" id="audit"></div>
+    <!-- ================= FAQ ================= -->
+    <section class="s faq-sec" aria-labelledby="faq-title">
+      <div class="wrap-narrow">
+        <h2 id="faq-title" class="r">Questions a skeptic would ask.</h2>
+        <div class="faq r">
+          <details open>
+            <summary>Couldn't normal tests catch this?</summary>
+            <p>They didn't. ShopLedger's five original tests all passed while the books were $43,627.98 off. Tests check what a developer thought to check. Penny checks the ledger against the written rules, then proves each gap with a new test.</p>
+          </details>
+          <details>
+            <summary>Why not just ask Bob in Agent mode?</summary>
+            <p>Agent mode will happily fix code. Penny's mode adds the discipline an audit needs: she cannot edit the fee schedule or the reconciliation script, she must show a failing test before any fix, and she stops after every phase so a person reviews the evidence.</p>
+          </details>
+          <details>
+            <summary>Does Penny change my code without asking?</summary>
+            <p>No. She works one phase at a time and waits for you to say continue. Fixes go one finding at a time, each with its own test and an entry in the fix log.</p>
+          </details>
+          <details>
+            <summary>How do I know the numbers are real?</summary>
+            <p>Everything on this page comes from files in the repository: the reconciliation script, Penny's reports and the test suite. Clone it, run npm test and npm run simulate, and you get the same numbers.</p>
+          </details>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <a href="#top" class="brand"><span class="coin" aria-hidden="true">P</span>Penny</a>
+        <p>Every cent accounted for.</p>
+      </div>
+      <div class="foot-cols">
+        <div><b>Product</b><a href="#how">How it works</a><a href="#audit">The audit</a><a href="#findings">Findings</a><a href="#limits">Limits</a></div>
+        <div><b>Evidence</b><a href="https://github.com/Kingnanaweb3/penny/tree/main/penny-report" target="_blank" rel="noopener">Reports</a><a href="https://github.com/Kingnanaweb3/penny/tree/main/sample-app/tests" target="_blank" rel="noopener">Tests</a><a href="https://github.com/Kingnanaweb3/penny/tree/main/bob_sessions" target="_blank" rel="noopener">Bob sessions</a></div>
+        <div><b>Built with</b><a href="https://github.com/Kingnanaweb3/penny/tree/main/.bob" target="_blank" rel="noopener">IBM Bob 2.0</a><a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a></div>
+      </div>
+    </div>
+    <div class="foot-img" aria-hidden="true"><img src="/hero.jpg" alt="" loading="lazy"></div>
+    <p class="foot-note">Built for the IBM Bob 2.0 Hackathon, September 2026.</p>
+  </footer>
 
   <script type="module" src="/src/main.js"></script>
 </body>

@@ -1,3 +1,361 @@
+#!/usr/bin/env bash
+# Rebuilds the whole Penny site in light mode with every section:
+# hero, proof band, how it works, the audit, findings, built on Bob, limits, FAQ, footer.
+# Replaces site/index.html, site/src/style.css and site/src/main.js.
+# Keeps site/public/hero.jpg, package.json and node_modules.
+# Run from the penny folder. Your running `npm run dev` picks it up on its own.
+set -euo pipefail
+
+if [ ! -f site/package.json ]; then echo "Run scripts/06_setup_site_vite.sh first."; exit 1; fi
+if [ ! -f site/public/hero.jpg ]; then echo "Missing site/public/hero.jpg. Run scripts/06_setup_site_vite.sh first."; exit 1; fi
+mkdir -p site/src
+
+cat > site/index.html << 'HTML_EOF'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FAF8F4">
+  <title>Penny: your tests pass, your books don't</title>
+  <meta name="description" content="Penny is a money auditor inside IBM Bob. She proves every discrepancy in your payment code with a failing test, fixes it, and proves the books balance.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#top" class="brand" aria-label="Penny home"><span class="coin" aria-hidden="true">P</span>Penny</a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#how">How it works</a>
+        <a href="#findings">Findings</a>
+        <a href="#bob">Built on Bob</a>
+        <a href="#limits">Limits</a>
+        <a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <a href="#audit" class="nav-cta">See the audit</a>
+      <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
+    </div>
+  </header>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Menu" aria-hidden="true">
+    <button class="burger drawer-close" id="close" aria-label="Close menu">&times;</button>
+    <a href="#how">How it works</a>
+    <a href="#findings">Findings</a>
+    <a href="#bob">Built on Bob</a>
+    <a href="#limits">Limits</a>
+    <a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a>
+    <a href="#audit" class="pill-lg solid">See the audit</a>
+  </aside>
+
+  <main id="top">
+
+    <!-- ================= HERO ================= -->
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="hero-img" src="/hero.jpg" alt="" fetchpriority="high">
+      <div class="hero-copy">
+        <h1 id="hero-title" class="rise">
+          <span class="l1">Your tests pass. Your books don't.</span>
+          <span class="l2">Penny finds every cent.</span>
+        </h1>
+        <p class="lead rise d1">A money auditor that lives inside IBM Bob. She proves every discrepancy in your payment code with a failing test, fixes it, and proves the books balance.</p>
+        <div class="ctas rise d2">
+          <a href="#audit" class="pill-lg solid">See the audit</a>
+          <a href="https://github.com/Kingnanaweb3/penny" class="pill-lg ghost" target="_blank" rel="noopener">Read the code</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PROOF BAND ================= -->
+    <section class="s proof-sec" aria-label="The audit in numbers">
+      <div class="wrap">
+        <p class="proof-kicker r">One simulated day at ShopLedger, a sample payments app, 500 orders</p>
+        <div class="proof r">
+          <div><b class="num">$43,627.98</b><p>Missing from the books before Penny</p></div>
+          <div><b class="num">5 of 5</b><p>Original tests passing while the books were off</p></div>
+          <div><b class="num">0 of 7</b><p>Fee schedule rules enforced at audit</p></div>
+          <div><b class="num">7</b><p>Findings, each proven with a failing test</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW IT WORKS ================= -->
+    <section class="s feat" id="how" aria-labelledby="how-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">How it works</span>
+            <h2 id="how-title">An auditor's method, run inside your editor.</h2>
+          </div>
+        </div>
+
+        <div class="feat-row r">
+          <div class="stage" aria-hidden="true">
+            <div class="glow"></div>
+            <div class="mock tilt-l">
+              <div class="mock-bar"><i></i><i></i><i></i><span class="mono">02-spec-check.md</span></div>
+              <div class="mock-body">
+                <div class="mock-title">Fee schedule, rule by rule</div>
+                <ul class="rules">
+                  <li><span class="rn mono">R1</span>Whole cents only<b class="tag bad">Violated</b></li>
+                  <li><span class="rn mono">R2</span>Tax rounded once<b class="tag bad">Violated</b></li>
+                  <li><span class="rn mono">R3</span>Fee capped at $20<b class="tag bad">Violated</b></li>
+                  <li><span class="rn mono">R4</span>Fee taken once<b class="tag bad">Violated</b></li>
+                  <li><span class="rn mono">R5</span>Retries charge once<b class="tag warn">Missing</b></li>
+                  <li><span class="rn mono">R6</span>Refunds never exceed charge<b class="tag warn">Missing</b></li>
+                  <li><span class="rn mono">R7</span>Clearing nets to zero<b class="tag bad">Violated</b></li>
+                </ul>
+              </div>
+            </div>
+            <div class="chip chip-br"><span class="k mono">Enforced at audit</span><span class="v num">0 of 7</span></div>
+            <div class="badge badge-r"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg></div>
+          </div>
+          <div class="feat-copy">
+            <h3>Every rule in your fee schedule, checked.</h3>
+            <p>Penny reads your written money rules, turns each one into a check, and finds the exact file and line that breaks it. On our sample payments app, not one of the seven rules held.</p>
+            <div class="feat-ctas">
+              <a class="pill-md solid" href="https://github.com/Kingnanaweb3/penny/blob/main/penny-report/02-spec-check.md" target="_blank" rel="noopener">Read the spec check</a>
+              <a class="pill-md ghost" href="https://github.com/Kingnanaweb3/penny/blob/main/sample-app/docs/fee-schedule.md" target="_blank" rel="noopener">See the rules</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-row flip r">
+          <div class="stage" aria-hidden="true">
+            <div class="glow"></div>
+            <div class="mock term-mock tilt-r">
+              <div class="mock-bar"><i></i><i></i><i></i><span class="mono">p3-idempotency.test.js</span></div>
+              <div class="mock-body term mono">
+                <div class="ln dim">$ node --test tests/penny/p3-idempotency.test.js</div>
+                <div class="ln bad">✖ customer debited once on retry</div>
+                <div class="ln dim">&nbsp;&nbsp;expected 107.50</div>
+                <div class="ln dim">&nbsp;&nbsp;actual&nbsp;&nbsp;&nbsp;215.00</div>
+                <div class="ln sep"></div>
+                <div class="ln dim"># fix: remember each idempotency key</div>
+                <div class="ln sep"></div>
+                <div class="ln good">✔ customer debited once on retry</div>
+                <div class="ln dim">&nbsp;&nbsp;tests 12 &nbsp;pass 12 &nbsp;fail 0</div>
+              </div>
+            </div>
+            <div class="chip chip-tl"><span class="k mono">Order</span><span class="v small">Red, then green</span></div>
+            <div class="badge badge-l"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12l4 4L19 6"/></svg></div>
+          </div>
+          <div class="feat-copy">
+            <h3>Every fix starts with a failing test.</h3>
+            <p>Penny never patches on a hunch. She writes a test that shows the money going wrong, runs it and lets it fail, makes the smallest fix, then runs the whole suite again. One finding, one proof, one fix.</p>
+            <div class="feat-ctas">
+              <a class="pill-md solid" href="https://github.com/Kingnanaweb3/penny/blob/main/penny-report/04-fix-log.md" target="_blank" rel="noopener">Read the fix log</a>
+              <a class="pill-md ghost" href="https://github.com/Kingnanaweb3/penny/tree/main/sample-app/tests/penny" target="_blank" rel="noopener">See the tests</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-row r">
+          <div class="stage" aria-hidden="true">
+            <div class="glow"></div>
+            <div class="mock tilt-l">
+              <div class="mock-bar"><i></i><i></i><i></i><span class="mono">03-findings.md</span></div>
+              <div class="mock-body">
+                <div class="mock-title">Clearing account, explained</div>
+                <div class="decomp">
+                  <div class="drow"><span>Retries charged twice <em class="mono">P3</em></span><b class="num">+15,348.51</b></div>
+                  <div class="drow"><span>Fee taken at charge <em class="mono">P4</em></span><b class="num">−11,532.69</b></div>
+                  <div class="drow"><span>Float noise <em class="mono">P1</em></span><b class="num">0.00</b></div>
+                  <div class="drow total"><span>Ledger difference</span><b class="num">+3,815.82</b></div>
+                </div>
+              </div>
+            </div>
+            <div class="chip chip-br"><span class="k mono">Unexplained</span><span class="v num good">$0.00</span></div>
+            <div class="badge badge-r"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          </div>
+          <div class="feat-copy">
+            <h3>Every dollar traced to its cause.</h3>
+            <p>A total is not an explanation. Penny splits each account's gap into the bugs that caused it, and the parts add up to the cent. No plug figures, nothing left over.</p>
+            <div class="feat-ctas">
+              <a class="pill-md solid" href="https://github.com/Kingnanaweb3/penny/blob/main/penny-report/03-findings.md" target="_blank" rel="noopener">Read the findings</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= THE ARITHMETIC ================= -->
+    <section class="s sum-sec" id="audit" aria-labelledby="audit-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">The audit</span>
+            <h2 id="audit-title">The whole story, in one line.</h2>
+            <p class="sub">Same simulated day, same 500 orders, same reconciliation script. The only thing that changed is the code Penny fixed.</p>
+          </div>
+        </div>
+        <div class="sum r">
+          <div class="sum-box warn">
+            <span class="k">Before Penny</span>
+            <b class="v num">$43,627.98</b>
+            <p class="n">Off across four accounts, with every original test passing.</p>
+          </div>
+          <div class="sum-op" aria-hidden="true">&minus;</div>
+          <div class="sum-box">
+            <span class="k">Seven proven fixes</span>
+            <b class="v num">7</b>
+            <p class="n">Each one a failing test first, then the smallest change that makes it pass.</p>
+          </div>
+          <div class="sum-op" aria-hidden="true">=</div>
+          <!-- AFTER VALUE: replace "Pending" with the real total from Penny's Phase 5 trial balance -->
+          <div class="sum-box pending" id="after-box">
+            <span class="k">After Penny</span>
+            <b class="v num" id="after-value">Pending</b>
+            <p class="n" id="after-note">Filled in from Penny's final trial balance, not before.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FINDINGS ================= -->
+    <section class="s findings" id="findings" aria-labelledby="findings-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">Findings</span>
+            <h2 id="findings-title">Seven findings. Every one proven.</h2>
+            <p class="sub">From Penny's audit of ShopLedger, a sample payments app with deliberately seeded bugs. Pick one to see its impact.</p>
+          </div>
+          <a class="explore" href="https://github.com/Kingnanaweb3/penny/blob/main/penny-report/03-findings.md" target="_blank" rel="noopener">Explore <span aria-hidden="true">&rsaquo;</span></a>
+        </div>
+
+        <div class="fnd r">
+          <div class="picker-panel">
+            <ul class="picker" id="picker" role="listbox" aria-label="Findings">
+              <li role="option"><span class="pid mono">P1</span>Float money</li>
+              <li role="option"><span class="pid mono">P2</span>Rounding drift</li>
+              <li role="option"><span class="pid mono">P3</span>Retries charged twice</li>
+              <li role="option"><span class="pid mono">P4</span>Fee taken twice</li>
+              <li role="option"><span class="pid mono">P5</span>Fee cap missing</li>
+              <li role="option"><span class="pid mono">P6</span>Refunds over the charge</li>
+              <li role="option"><span class="pid mono">P7</span>Clearing never zero</li>
+            </ul>
+          </div>
+          <div class="fnd-side">
+            <div class="detail" aria-live="polite">
+              <div class="d-head"><span class="d-id mono" id="d-id">P3</span><span id="d-title">Retries charged twice</span><b class="sev Critical" id="d-sev">Critical</b></div>
+              <p id="d-desc">A retried charge with the same idempotency key debited the customer a second time.</p>
+              <dl>
+                <div><dt>Rule broken</dt><dd id="d-rule">Rule 5</dd></div>
+                <div><dt>Impact, one day</dt><dd class="num" id="d-imp">$15,582.24</dd></div>
+                <div><dt>Who loses</dt><dd id="d-who">Customers</dd></div>
+              </dl>
+            </div>
+            <ul class="feats">
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>Graded by dollar impact, not by guesswork</li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Each one proven by a failing test before the fix</li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cited to a rule, a file and a line</li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h18M3 6h18M3 18h12"/></svg>Split per account, adding up to the cent</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= BUILT ON BOB ================= -->
+    <section class="s bob-band" id="bob" aria-labelledby="bob-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <h2 id="bob-title">Built into IBM Bob, not bolted on.</h2>
+            <p class="sub">Penny is not a script that calls Bob. She is Bob, shaped by a custom mode, her own rules and five skills, working in your repository.</p>
+          </div>
+          <a class="explore" href="https://github.com/Kingnanaweb3/penny/tree/main/.bob" target="_blank" rel="noopener">Explore <span aria-hidden="true">&rsaquo;</span></a>
+        </div>
+        <div class="hub r" aria-hidden="true">
+          <div class="node n-top">Custom mode</div>
+          <div class="node n-left">Mode rules</div>
+          <div class="core"><span>Penny</span></div>
+          <div class="node n-right">Five skills</div>
+          <div class="node n-bottom">Reads documents</div>
+        </div>
+        <div class="hub-legend r">
+          <div><b>Custom mode</b><p>A Bob mode with her own role, five phases, and tool access limited to reading, editing and running tests.</p></div>
+          <div><b>Mode rules</b><p>Active only in Penny mode. She may never edit the fee schedule, and every fix needs a failing test first.</p></div>
+          <div><b>Five skills</b><p>One per phase: map the money, check the rules, hunt, prove and fix, trial balance.</p></div>
+          <div><b>Reads documents</b><p>Penny reads the written fee schedule and checks the code against every rule in it.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HONEST LIMITS ================= -->
+    <section class="s limits-sec" id="limits" aria-labelledby="limits-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">Limits</span>
+            <h2 id="limits-title">What Penny does not do yet.</h2>
+            <p class="sub">Said plainly, so you can judge the rest of the page with it in mind.</p>
+          </div>
+        </div>
+        <div class="limits r">
+          <div><b>The bugs were seeded</b><p>ShopLedger's money bugs were planted on purpose to mirror common real failures. Penny has not yet been run against a production payments codebase.</p></div>
+          <div><b>A simple ledger</b><p>The sample app keeps its ledger in memory. There is no database, no concurrency and no real payment provider in the loop.</p></div>
+          <div><b>It needs written rules</b><p>Policy checks depend on a fee schedule document. Without one, Penny can still catch float and rounding bugs, but not broken business rules.</p></div>
+          <div><b>Wired to this repo</b><p>Penny's rules point at ShopLedger's file paths. Using her on another codebase today means editing those paths in the .bob folder.</p></div>
+          <div><b>Not a human auditor</b><p>Penny produces evidence for an engineer or finance lead to review. She does not sign off on anyone's books.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FAQ ================= -->
+    <section class="s faq-sec" aria-labelledby="faq-title">
+      <div class="wrap-narrow">
+        <h2 id="faq-title" class="r">Questions a skeptic would ask.</h2>
+        <div class="faq r">
+          <details open>
+            <summary>Couldn't normal tests catch this?</summary>
+            <p>They didn't. ShopLedger's five original tests all passed while the books were $43,627.98 off. Tests check what a developer thought to check. Penny checks the ledger against the written rules, then proves each gap with a new test.</p>
+          </details>
+          <details>
+            <summary>Why not just ask Bob in Agent mode?</summary>
+            <p>Agent mode will happily fix code. Penny's mode adds the discipline an audit needs: she cannot edit the fee schedule or the reconciliation script, she must show a failing test before any fix, and she stops after every phase so a person reviews the evidence.</p>
+          </details>
+          <details>
+            <summary>Does Penny change my code without asking?</summary>
+            <p>No. She works one phase at a time and waits for you to say continue. Fixes go one finding at a time, each with its own test and an entry in the fix log.</p>
+          </details>
+          <details>
+            <summary>How do I know the numbers are real?</summary>
+            <p>Everything on this page comes from files in the repository: the reconciliation script, Penny's reports and the test suite. Clone it, run npm test and npm run simulate, and you get the same numbers.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <a href="#top" class="brand"><span class="coin" aria-hidden="true">P</span>Penny</a>
+        <p>Every cent accounted for.</p>
+      </div>
+      <div class="foot-cols">
+        <div><b>Product</b><a href="#how">How it works</a><a href="#audit">The audit</a><a href="#findings">Findings</a><a href="#limits">Limits</a></div>
+        <div><b>Evidence</b><a href="https://github.com/Kingnanaweb3/penny/tree/main/penny-report" target="_blank" rel="noopener">Reports</a><a href="https://github.com/Kingnanaweb3/penny/tree/main/sample-app/tests" target="_blank" rel="noopener">Tests</a><a href="https://github.com/Kingnanaweb3/penny/tree/main/bob_sessions" target="_blank" rel="noopener">Bob sessions</a></div>
+        <div><b>Built with</b><a href="https://github.com/Kingnanaweb3/penny/tree/main/.bob" target="_blank" rel="noopener">IBM Bob 2.0</a><a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a></div>
+      </div>
+    </div>
+    <div class="foot-img" aria-hidden="true"><img src="/hero.jpg" alt="" loading="lazy"></div>
+    <p class="foot-note">Built for the IBM Bob 2.0 Hackathon, September 2026.</p>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+HTML_EOF
+
+cat > site/src/style.css << 'CSS_EOF'
 /* Penny landing page.
    Structure, type scale, spacing and components follow the landing page design system.
    Color is reskinned to a light, warm palette taken from the hero painting. */
@@ -487,3 +845,89 @@ h1 .l2 { color: rgba(26,25,23,.58); }
   .rise, .hero-img, .r { opacity: 1; transform: none; animation: none; transition: none; }
   .mock { transition: none; }
 }
+CSS_EOF
+
+cat > site/src/main.js << 'JS_EOF'
+// ---------- Nav: solid after 24px of scroll ----------
+const nav = document.getElementById('nav');
+const onScroll = () => nav.classList.toggle('stuck', window.scrollY > 24);
+onScroll();
+window.addEventListener('scroll', onScroll, { passive: true });
+
+// ---------- Mobile drawer ----------
+const body = document.body;
+const burger = document.getElementById('burger');
+const drawer = document.getElementById('drawer');
+const setOpen = (open) => {
+  body.classList.toggle('open', open);
+  burger.setAttribute('aria-expanded', String(open));
+  drawer.setAttribute('aria-hidden', String(!open));
+};
+burger.addEventListener('click', () => setOpen(true));
+document.getElementById('close').addEventListener('click', () => setOpen(false));
+document.getElementById('scrim').addEventListener('click', () => setOpen(false));
+drawer.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+
+// ---------- Reveal on scroll (design system section 15) ----------
+// Header and body of a section stagger against each other; cards inside do not.
+document.querySelectorAll('section').forEach((sec) => {
+  sec.querySelectorAll(':scope .r').forEach((el, i) => { if (i === 1) el.classList.add('r-1'); if (i >= 2) el.classList.add('r-2'); });
+});
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }
+}, { rootMargin: '0px 0px -10% 0px', threshold: 0.06 });
+document.querySelectorAll('.r').forEach((el) => io.observe(el));
+
+// ---------- The audit: after value ----------
+// Set this from Penny's Phase 5 trial balance. Leave null until it has actually been observed.
+const AFTER_TOTAL = null; // for example '$0.00'
+if (AFTER_TOTAL !== null) {
+  const box = document.getElementById('after-box');
+  box.classList.remove('pending');
+  box.classList.add('good');
+  document.getElementById('after-value').textContent = AFTER_TOTAL;
+  document.getElementById('after-note').textContent = 'Total discrepancy after every fix, from the same reconciliation script.';
+}
+
+// ---------- Findings picker (numbers from penny-report/03-findings.md) ----------
+const FINDINGS = [
+  { id: 'P1', title: 'Float money', sev: 'Low', rule: 'Rule 1', imp: 'Under $0.05', who: 'Every account',
+    desc: 'Money was stored as fractional numbers, so amounts carried stray fractions of a cent.' },
+  { id: 'P2', title: 'Rounding drift', sev: 'Low', rule: 'Rule 2', imp: '$0.59', who: 'Customers',
+    desc: 'Tax was rounded per line, so the amount charged could differ from the receipt.' },
+  { id: 'P3', title: 'Retries charged twice', sev: 'Critical', rule: 'Rule 5', imp: '$15,582.24', who: 'Customers',
+    desc: 'A retried charge with the same idempotency key debited the customer a second time.' },
+  { id: 'P4', title: 'Fee taken twice', sev: 'Critical', rule: 'Rule 4', imp: '$11,532.69', who: 'Clearing account',
+    desc: 'The platform fee was posted at charge time and again at settlement.' },
+  { id: 'P5', title: 'Fee cap missing', sev: 'High', rule: 'Rule 3', imp: '$6,231.71', who: 'Merchants',
+    desc: 'The $20 fee cap in the fee schedule was never applied, so large orders paid more.' },
+  { id: 'P6', title: 'Refunds over the charge', sev: 'High', rule: 'Rule 6', imp: '$2,577.08', who: 'Merchants',
+    desc: 'Duplicate refund requests paid out more than the customer was charged.' },
+  { id: 'P7', title: 'Clearing never zero', sev: 'High', rule: 'Rule 7', imp: '$3,815.82', who: 'Platform',
+    desc: 'The holding account kept a balance after settlement, caused by P3 and P4 together.' },
+];
+const picker = document.getElementById('picker');
+if (picker) {
+  const items = [...picker.querySelectorAll('li')];
+  const $ = (id) => document.getElementById(id);
+  const select = (sel) => {
+    items.forEach((li, i) => { li.dataset.d = String(Math.abs(i - sel)); li.setAttribute('aria-selected', String(i === sel)); });
+    const f = FINDINGS[sel];
+    $('d-id').textContent = f.id; $('d-title').textContent = f.title;
+    $('d-sev').textContent = f.sev; $('d-sev').className = `sev ${f.sev}`;
+    $('d-desc').textContent = f.desc; $('d-rule').textContent = f.rule;
+    $('d-imp').textContent = f.imp; $('d-who').textContent = f.who;
+  };
+  items.forEach((li, i) => {
+    li.tabIndex = 0;
+    li.addEventListener('click', () => select(i));
+    li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(i); } });
+  });
+  select(2);
+}
+JS_EOF
+
+echo "Site rebuilt in light mode with all sections."
