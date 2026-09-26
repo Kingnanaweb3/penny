@@ -19,7 +19,7 @@ export class PaymentService {
     this.ledger.post({ ref: paymentId, from: customer, to: 'clearing', amount, memo: 'charge' });
     // Rule 4: fee is taken exactly once, at settlement — no charge-time fee posting.
 
-    this.payments.set(paymentId, { paymentId, customer, merchant, amount, idempotencyKey, refunded: 0, settled: false });
+    this.payments.set(paymentId, { paymentId, customer, merchant, amount, idempotencyKey, refundedCents: 0, settled: false });
     const feeCents = Math.min(Math.round(Math.round(amount * 100) * FEE_RATE), FEE_CAP_CENTS);
     const result = { paymentId, amount, fee: feeCents / 100 };
     if (idempotencyKey) this.idempotencyKeys.set(idempotencyKey, result);
@@ -46,7 +46,17 @@ export class PaymentService {
     const p = this.payments.get(paymentId);
     if (!p) throw new Error(`Unknown payment ${paymentId}`);
 
-    p.refunded += amount;
-    this.ledger.post({ ref: paymentId, from: p.merchant, to: p.customer, amount, memo: 'refund' });
+    // Rule 6: total refunds may never exceed the amount charged.
+    // Work in whole cents to avoid float drift in the running total.
+    const amountCents    = Math.round(p.amount * 100);
+    const requestedCents = Math.round(amount * 100);
+    const remainingCents = amountCents - p.refundedCents;
+    const appliedCents   = Math.min(requestedCents, remainingCents);
+
+    if (appliedCents <= 0) return 0;
+
+    p.refundedCents += appliedCents;
+    this.ledger.post({ ref: paymentId, from: p.merchant, to: p.customer, amount: appliedCents / 100, memo: 'refund' });
+    return appliedCents / 100;
   }
 }
