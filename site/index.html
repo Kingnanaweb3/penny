@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Penny: your tests pass, your books don't</title>
+  <meta name="description" content="Penny is a money auditor inside IBM Bob. She proves every discrepancy in your payment code with a failing test, fixes it, and proves the books balance.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#top" class="brand" aria-label="Penny home">
+        <span class="coin" aria-hidden="true">P</span>Penny
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#how">How it works</a>
+        <a href="#findings">Findings</a>
+        <a href="#bob">Built on Bob</a>
+        <a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <a href="#audit" class="nav-cta">See the audit</a>
+      <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
+    </div>
+  </header>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Menu" aria-hidden="true">
+    <button class="burger drawer-close" id="close" aria-label="Close menu">&times;</button>
+    <a href="#how">How it works</a>
+    <a href="#findings">Findings</a>
+    <a href="#bob">Built on Bob</a>
+    <a href="https://github.com/Kingnanaweb3/penny" target="_blank" rel="noopener">GitHub</a>
+    <a href="#audit" class="pill-lg solid">See the audit</a>
+  </aside>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="hero-img" src="/hero.jpg" alt="" fetchpriority="high">
+      <div class="hero-copy">
+        <h1 id="hero-title" class="rise">
+          <span class="l1">Your tests pass. Your books don't.</span>
+          <span class="l2">Penny finds every cent.</span>
+        </h1>
+        <p class="lead rise d1">A money auditor that lives inside IBM Bob. She proves every discrepancy in your payment code with a failing test, fixes it, and proves the books balance.</p>
+        <div class="ctas rise d2">
+          <a href="#audit" class="pill-lg solid">See the audit</a>
+          <a href="https://github.com/Kingnanaweb3/penny" class="pill-lg ghost mono-pill" target="_blank" rel="noopener"><span class="k">Built on</span> IBM Bob 2.0</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="next" id="audit"></div>
+  </main>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

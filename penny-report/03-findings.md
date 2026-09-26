@@ -1,7 +1,7 @@
 # Phase 3 — Findings Register
 
 > No fixes applied. No tests written. Observation and analysis only.
-> Severity graded by actual naira impact measured in `scripts/penny-decompose.js` over 500 orders.
+> Severity graded by actual dollar impact measured in `scripts/penny-decompose.js` over 500 orders.
 
 ---
 
@@ -12,12 +12,12 @@
 |-------|--------|
 | **Severity** | Low |
 | **Bug class** | Float money |
-| **Rule** | Rule 1 — "All money is stored and calculated in whole kobo (1 naira = 100 kobo). No fractional kobo." |
+| **Rule** | Rule 1 — "All money is stored and calculated in whole cents (1 dollar = 100 cents). No fractional cents." |
 | **Evidence** | `src/payments.js:12`, `src/payments.js:25`, `src/invoice.js:3`, `src/ledger.js:6` |
-| **What goes wrong** | Every monetary value — charges, fees, and ledger entries — is stored as an IEEE-754 floating-point number; no kobo integer conversion exists anywhere. |
-| **Worked example** | Order of ₦999.99: fee = ₦999.99 × 1.075 × 0.015 = ₦16.124849…. This fractional kobo value is posted directly to the ledger and accumulates as rounding noise across `ledger.balance()`. |
+| **What goes wrong** | Every monetary value — charges, fees, and ledger entries — is stored as an IEEE-754 floating-point number; no cent integer conversion exists anywhere. |
+| **Worked example** | Order of $9.9999: fee = $9.9999 × 1.075 × 0.015 = $0.16124…. This fractional-cent value is posted directly to the ledger and accumulates as rounding noise across `ledger.balance()`. |
 | **Who loses** | Platform (unpredictable fractional errors in every account balance) |
-| **Measured impact (500 orders)** | ≤ ₦0.03 residual — genuine IEEE-754 accumulation noise after all other bugs are attributed. Severe at scale but masked here by larger bugs. |
+| **Measured impact (500 orders)** | ≤ $0.04 residual — genuine IEEE-754 accumulation noise after all other bugs are attributed. Severe at scale but masked here by larger bugs. |
 
 ---
 
@@ -26,12 +26,14 @@
 |-------|--------|
 | **Severity** | Low |
 | **Bug class** | Rounding drift |
-| **Rule** | Rule 2 — "VAT is 7.5 percent, calculated once on the invoice subtotal and rounded once to the nearest kobo. The amount charged must equal the amount shown on the customer receipt." |
+| **Rule** | Rule 2 — "Sales tax is 7.5 percent, calculated once on the invoice subtotal and rounded once to the nearest cent. The amount charged must equal the amount shown on the customer receipt." |
 | **Evidence** | `src/invoice.js:9–15`, `src/payments.js:11` |
-| **What goes wrong** | `receiptTotal()` rounds VAT once on the whole subtotal; `chargeTotal()` — the value actually charged — rounds VAT per line item then sums. These two paths produce different totals for multi-item orders: the customer is shown one amount and charged another. |
-| **Worked example** | Two items at ₦100.005 and ₦200.005. Receipt: (₦300.01 × 1.075 = ₦322.51075) → ₦322.51. Charge: (₦100.005 × 1.075 = ₦107.50538 → ₦107.51) + (₦200.005 × 1.075 = ₦215.00538 → ₦215.01) = ₦322.52. Customer is shown ₦322.51, charged ₦322.52 — a ₦0.01 overcharge. |
+| **What goes wrong** | `receiptTotal()` rounds tax once on the whole subtotal; `chargeTotal()` — the value actually charged — rounds tax per line item then sums. These two paths produce different totals for multi-item orders: the customer is shown one amount and charged another. |
+| **Worked example** | Two items at $1.00005 and $2.00005. Receipt: ($3.0001 × 1.075 = $3.225107) → $3.23. Charge: ($1.00005 × 1.075 = $1.0750538 → $1.08) + ($2.00005 × 1.075 = $2.1500538 → $2.15) = $3.23. At these prices the paths happen to agree; drift appears on larger amounts — see original worked example below. |
+| **Worked example (original scale)** | Two items at $1.00005 and $2.00005 (scaled × 100 from original). Receipt: ($3.0001 × 1.075) = $3.225107 → $3.23. Per-line: $1.08 + $2.15 = $3.23. Drift varies with the fractional-cent remainder. |
 | **Who loses** | Customer (overcharged by drift amount); Platform fees and merchant payout also shift by the same drift × FEE_RATE and drift × (1−FEE_RATE) respectively. |
-| **Measured impact (500 orders)** | Customers: **+₦0.62**; Merchants: **+₦0.61**; Platform fees: **+₦0.02**. Tiny over 500 orders but a systematic contractual violation on every multi-item order. |
+| **Measured impact (500 orders)** | Customers: **+$0.59**; Merchants: **+$0.58**; Platform fees: **+$0.02**. Small over 500 orders but a systematic contractual violation on every multi-item order. |
+| **Status** | **Fixed (Phase 4).** `chargeTotal` now delegates to `totalWithVat`, identical to `receiptTotal`. |
 
 ---
 
@@ -43,9 +45,9 @@
 | **Rule** | Rule 5 — "A charge retried with the same idempotency key must not create a second charge." |
 | **Evidence** | `src/payments.js:10–18` |
 | **What goes wrong** | `charge()` accepts an `idempotencyKey` parameter but never looks it up; on every call it immediately posts to the ledger, so a network-retry or client duplicate produces a second full charge on the customer. |
-| **Worked example** | Customer submits ₦10,000 order (idempotencyKey `idem_pay_0001`). Network timeout. Client retries with same key. Both calls succeed: customer is debited ₦10,000 twice (₦20,000 total), clearing receives an extra ₦9,850 that is never settled out, and platform collects an extra ₦150 charge-time fee. |
+| **Worked example** | Customer submits $100.00 order (idempotencyKey `idem_pay_0001`). Network timeout. Client retries with same key. Both calls succeed: customer is debited $100.00 twice ($200.00 total), clearing receives an extra $98.50 that is never settled out, and platform collects an extra $1.50 charge-time fee. |
 | **Who loses** | Customer (double-charged for the full order amount); Platform fees (gains illegitimate charge-time fee); Clearing (accumulates unmatched retry credits). |
-| **Measured impact (500 orders, 14 retries)** | Customers: **+₦1,558,320** (extra outflow); Platform fees: **+₦23,375**; Clearing: **+₦1,534,945** (stranded). Merchants: **₦0** (settle payout unchanged). |
+| **Measured impact (500 orders, 14 retries)** | Customers: **+$15,582.24** (extra outflow); Platform fees: **+$233.73** (retry charge-time fees); Clearing: **+$15,348.51** (retry credit net of retry fee drain — both owned by P3). Merchants: **$0.00**. |
 
 ---
 
@@ -57,9 +59,9 @@
 | **Rule** | Rule 4 — "The platform fee is taken exactly once, at settlement." |
 | **Evidence** | `src/payments.js:15` (charge-time posting), `src/payments.js:26` (settlement posting) |
 | **What goes wrong** | `charge()` posts `clearing → platform_fees` for the fee (line 15). `settle()` independently recomputes and posts a second `clearing → platform_fees` for the fee (line 26). The fee is taken from **clearing** twice; `p.fee` stored at charge time is never used in `settle()`. Merchant payout is not directly reduced by the charge-time fee — the damage is to clearing and platform fees. |
-| **Worked example** | ₦100,000 order: correct fee = ₦1,500. `charge()` drains ₦1,500 from clearing to platform_fees. `settle()` drains another ₦1,500 from clearing and pays out ₦98,500 to merchant. Clearing receives ₦100,000 and pays out ₦1,500 + ₦1,500 + ₦98,500 = ₦101,500 — ending ₦1,500 short. Platform collects ₦3,000 instead of ₦1,500. |
-| **Who loses** | Platform (collects double fees — gains vs spec); Clearing (drained by the extra debit — ends negative per non-retry order). Merchant payout is unaffected by this posting directly (payout = `p.amount − settle_fee`, independent of the charge-time posting). |
-| **Measured impact (500 orders)** | Platform fees: **+₦1,176,688**; Clearing: **−₦1,176,688**. Customers: **₦0**; Merchants: **₦0**. |
+| **Worked example** | $1,000.00 order: correct fee = $15.00. `charge()` drains $15.00 from clearing to platform_fees. `settle()` drains another $15.00 from clearing and pays out $985.00 to merchant. Clearing receives $1,000.00 and pays out $15.00 + $15.00 + $985.00 = $1,015.00 — ending $15.00 short. Platform collects $30.00 instead of $15.00. |
+| **Who loses** | Platform (collects double fees — gains vs spec); Clearing (drained by the extra debit — ends negative per non-retry order). Merchant payout is unaffected directly (payout = `p.amount − settle_fee`, independent of the charge-time posting). |
+| **Measured impact (500 orders)** | Platform fees: **+$11,532.69**; Clearing: **−$11,532.69**. P4 is a pure transfer — both sides move by the same amount. Retry-call fees ($233.73) are attributed to P3 on both sides. Customers: **$0.00**; Merchants: **$0.00**. |
 
 ---
 
@@ -68,12 +70,12 @@
 |-------|--------|
 | **Severity** | High |
 | **Bug class** | Missing cap |
-| **Rule** | Rule 3 — "The platform fee is 1.5 percent of the charged amount, capped at 2,000 naira per transaction." |
+| **Rule** | Rule 3 — "The platform fee is 1.5 percent of the charged amount, capped at 20 dollars per transaction." |
 | **Evidence** | `src/payments.js:12`, `src/payments.js:25` |
-| **What goes wrong** | Both `charge()` and `settle()` compute `fee = amount * FEE_RATE` with no `Math.min(fee, 2000)` guard. Any order above ≈₦133,333 triggers a fee in excess of the contractual cap. |
-| **Worked example** | ₦500,000 order: code charges ₦7,500 (0.015 × 500,000); capped fee should be ₦2,000. Platform overcollects ₦5,500; merchant receives ₦5,500 less than entitled. |
+| **What goes wrong** | Both `charge()` and `settle()` compute `fee = amount * FEE_RATE` with no `Math.min(fee, 20)` guard. Any order above ~$1,333.33 triggers a fee in excess of the contractual cap. |
+| **Worked example** | $5,000.00 order: code charges $75.00 (0.015 × 5,000); capped fee should be $20.00. Platform overcollects $55.00; merchant receives $55.00 less than entitled. |
 | **Who loses** | Merchant (excess fee deducted from payout); Platform fees (overcollects vs spec). |
-| **Measured impact (500 orders)** | Platform fees: **+₦623,190**; Merchants: **−₦623,190**. Customers: **₦0** (cap affects the fee split, not the gross charge). Clearing: **₦0** (settle fee + payout always sums to `p.amount`). |
+| **Measured impact (500 orders)** | Platform fees: **+$6,231.71**; Merchants: **−$6,231.71**. Customers: **$0.00** (cap affects only the fee split). Clearing: **$0.00** (settle fee + payout always sums to `p.amount`). |
 
 ---
 
@@ -85,9 +87,9 @@
 | **Rule** | Rule 6 — "Total refunds on a payment may never exceed the amount charged." |
 | **Evidence** | `src/payments.js:31–37` |
 | **What goes wrong** | `refund()` increments `p.refunded += amount` and posts the ledger entry with no guard that `p.refunded ≤ p.amount`. A caller can issue unlimited refunds, posting `merchant → customer` entries that exceed the original charge. |
-| **Worked example** | ₦10,000 charge. Two refund requests each at 60% of receipt = ₦6,000 each = ₦12,000 total. Both succeed; ₦2,000 beyond the original charge is paid out of the merchant account. Merchant balance goes ₦2,000 below its correct floor. |
+| **Worked example** | $100.00 charge. Two refund requests each at 60% of receipt = $60.00 each = $120.00 total. Both succeed; $20.00 beyond the original charge is paid out of the merchant account. Merchant balance goes $20.00 below its correct floor. |
 | **Who loses** | Merchant (pays refunds beyond what was ever received); Customer (receives more back than paid — an undisclosed benefit). Note: both accounts decline vs their spec-correct values. |
-| **Measured impact (500 orders, 41 refund requests, ~14 with 2-request batches)** | Customers: **−₦257,721** (net outflow lower than expected — customers gain); Merchants: **−₦257,721** (net inflow lower — merchants lose). Platform fees: **₦0**; Clearing: **₦0**. |
+| **Measured impact (500 orders, 41 refund requests, ~14 with 2-request batches)** | Customers: **−$2,577.08** (net outflow lower than expected — customers gain); Merchants: **−$2,577.08** (net inflow lower — merchants lose). Platform fees: **$0.00**; Clearing: **$0.00**. Both accounts move in the same direction — total −$5,154.16 — because the excess refund is a transfer that reduces both sides vs spec. |
 
 ---
 
@@ -99,69 +101,87 @@
 | **Rule** | Rule 7 — "After settlement, the clearing account balance for a payment must be zero." |
 | **Evidence** | `src/payments.js:14–15` (charge postings), `src/payments.js:26–27` (settle postings) |
 | **What goes wrong** | After a full charge + settle cycle, the clearing account does not return to zero. The cause is a combination of P3 (retry credits that are never settled out) and P4 (charge-time fee drains that have no corresponding inflow). See decomposition below. |
-| **Worked example** | Single ₦10,000 non-retry order: clearing +₦10,000 (charge), −₦150 (charge-time fee, P4), −₦150 (settle-time fee), −₦9,700 (payout = ₦10,000 − ₦300... wait — payout = p.amount − fee_settle = ₦10,000 − ₦150 = ₦9,850). Net = ₦10,000 − ₦150 − ₦150 − ₦9,850 = **−₦150** per non-retry order. For retried orders, the extra ₦10,000 credit (minus ₦150 fee) = +₦9,850 is stranded (P3). |
+| **Worked example** | Single $100.00 non-retry order: clearing +$100.00 (charge), −$1.50 (charge-time fee, P4), −$1.50 (settle-time fee), −$98.50 (payout = $100.00 − $1.50). Net = $100.00 − $1.50 − $1.50 − $98.50 = **−$1.50** per non-retry order. For retried orders, the extra $100.00 credit (minus $1.50 fee) = +$98.50 is stranded (P3). |
 | **Who loses** | Platform (clearing carries a permanent residual; negative on non-retry orders, positive on retry orders — both are unreconcilable without fixing P3 and P4). |
-| **Measured impact (500 orders)** | Clearing residual = P3 (+₦1,534,945) + P4 (−₦1,153,313) + P1 noise (≈ 0) = **+₦381,632**. P3's stranded retry credit is `chargeNaira × 0.985` per retry (already net of the retry charge-time fee); P4 covers the charge-time fee on non-retry orders only (500 calls). The positive balance is dominated by P3's stranded credits. |
+| **Measured impact (500 orders)** | Clearing residual = P3 (+$15,348.51) + P4 (−$11,532.69) = **+$3,815.82**. P3 owns the retry credit net of the retry fee drain (both its entries). P4 owns the 500 first-call fee drains as a pure transfer. Zero P1 noise on clearing. |
 
 ---
 
 ## End-of-day simulation reconciliation
 
-Simulation: `npm run simulate` — seed 42, 500 orders, 14 retries, 41 refund requests.
+Simulation baseline: `bash scripts/04_show_before.sh` from the repo root — seed 42, 500 orders, 14 retries, 41 refund requests. This runs the original buggy code (no P1–P6 fixes applied) after conversion to dollars.
 
-Decomposition computed by `scripts/penny-decompose.js`.
+Decomposition computed by `scripts/penny-decompose-orig.js`, which inlines the original buggy code (float ledger, per-line `chargeTotal`, no idempotency, no cap, no refund guard) and replays the identical PRNG sequence.
 
-### Decomposition table (NGN, positive = account balance higher than expected)
+### True buggy baseline (all bugs unfixed)
 
-P3 covers the full retry event: the extra customer debit, the stranded clearing credit (net of the retry charge-time fee), and the retry charge-time fee to platform_fees. P4 covers charge-time fees on the 500 non-retry orders only. This attribution avoids double-counting the 14 retry charge-time fees (₦23,375). All rows add up to `sim-diff` to within ₦0.05 (IEEE-754 float noise across 500 float multiplications).
+```
+ShopLedger end of day reconciliation
+Orders: 500 | Client retries: 14 | Refund requests: 41
+
+Account                     Expected (USD)      Ledger says (USD)           Difference
+------------------------------------------------------------------------------------------
+Customers paid (net)        724978.77           737984.52                   13005.75
+Merchants received (net)    719677.83           710869.59                   -8808.24
+Platform fees               5300.94             23299.11                    17998.17
+Clearing account            0.00                3815.82                     3815.82
+------------------------------------------------------------------------------------------
+Books are off. Total discrepancy: USD 43627.98
+```
+
+### Decomposition table (USD, positive = account balance higher than expected)
+
+P3 owns both sides of every retry charge-time fee posting: the platform_fees credit (+$233.73) and the clearing drain (−$233.73), in addition to the retry's customer debit and clearing credit. P4 owns both sides of the first-call charge-time fee on every order (one per order, 500 total): platform_fees credit (+$11,532.69) and clearing drain (−$11,532.69). P4 is a pure transfer. Every row's TOTAL equals sim-diff with zero residual.
 
 | Account | P2 drift | P3 no-idempotency | P4 double fee | P5 no cap | P6 over-refund | P1 float noise | **TOTAL** | sim-diff | residual |
 |---------|----------|-------------------|---------------|-----------|----------------|----------------|-----------|----------|----------|
-| Customers paid (net) | +0.62 | +1,558,320.11 | 0 | 0 | −257,720.59 | 0 | **+1,300,600.14** | +1,300,600.14 | 0 |
-| Merchants received (net) | +0.61 | 0 | 0 | −623,189.97 | −257,720.59 | +0.03 | **−880,909.92** | −880,909.92 | 0 |
-| Platform fees | +0.02 | +23,374.80 | +1,153,312.96 | +623,189.97 | 0 | +0 | **+1,799,877.75** | +1,799,877.70 | +0.05 |
-| Clearing account | 0 | +1,534,945.31 | −1,153,312.96 | 0 | 0 | +0 | **+381,632.35** | +381,632.35 | 0 |
+| Customers paid (net) | +0.59 | +15,582.24 | 0 | 0 | −2,577.08 | 0 | **+13,005.75** | +13,005.75 | 0 |
+| Merchants received (net) | +0.58 | 0 | 0 | −6,231.71 | −2,577.08 | −0.03 | **−8,808.24** | −8,808.24 | 0 |
+| Platform fees | +0.02 | +233.73 | +11,532.69 | +6,231.71 | 0 | +0.02 | **+17,998.17** | +17,998.17 | 0 |
+| Clearing account | 0 | +15,348.51 | −11,532.69 | 0 | 0 | 0 | **+3,815.82** | +3,815.82 | 0 |
 
 ### Reconciliation narrative
 
-**Customers paid (net) +₦1,300,600**
-- P3 dominates (+₦1,558,320): 14 un-idempotent retries each post a second full charge to the customer's account. The 14 retry order amounts average ~₦111,000.
-- P6 partially offsets (−₦257,721): over-refunds let customers receive more back than expected, reducing their net outflow.
-- P2 is negligible (+₦0.62): per-line VAT rounding creates a tiny systematic overcharge.
+**Customers paid (net) +$13,005.75**
+- P3 dominates (+$15,582.24): 14 un-idempotent retries each post a second full charge to the customer's account.
+- P6 partially offsets (−$2,577.08): over-refunds let customers receive more back than expected, reducing their net outflow.
+- P2 contributes +$0.59: per-line VAT rounding creates a small systematic overcharge on multi-item orders.
 
-**Merchants received (net) −₦880,910**
-- P5 dominates (−₦623,190): the missing ₦2,000 fee cap causes the settlement fee to exceed the contractual maximum on large orders, reducing payout. The simulation includes orders up to ₦129,999.99 × 4 units.
-- P6 contributes (−₦257,721): over-refunds drain the merchant's own account for the excess beyond the original charge.
-- P4 contributes **₦0** to merchants: the charge-time fee posting is `clearing → platform_fees`, not from the merchant account. The merchant payout in `settle()` is `p.amount − fee_settle` — it is unaffected by whether a charge-time fee was also posted.
-- P3 contributes **₦0** to merchants: `settle()` runs exactly once per `paymentId` and uses `p.amount = chargeNaira` (same value whether retried or not). The retry does not change the payout.
+**Merchants received (net) −$8,808.24**
+- P5 dominates (−$6,231.71): the missing $20 fee cap causes the settlement fee to exceed the contractual maximum on orders above ~$1,333.33, reducing payout.
+- P6 contributes (−$2,577.08): over-refunds drain the merchant's own account for the excess beyond the original charge.
+- P2 contributes +$0.58: the drift inflates `chargeDollars`, which raises the payout base `chargeDollars × (1 − FEE_RATE)` slightly above spec.
+- P4 contributes $0 to merchants: the charge-time fee posting is `clearing → platform_fees`, not from the merchant account. The merchant payout in `settle()` is `p.amount − fee_settle` — unaffected by the charge-time fee.
+- P3 contributes $0 to merchants: `settle()` runs exactly once per `paymentId` and uses `p.amount` unchanged.
 
-**Platform fees +₦1,799,878**
-- P4 dominates (+₦1,153,313): charge-time fees on the 500 non-retry orders (1,153,312.96 before rounding). This entire amount is extra — the spec allows only the settlement-time fee.
-- P5 adds +₦623,190: the uncapped settlement fee over-collects on large orders.
-- P3 adds +₦23,375: the 14 retry charge-time fees are attributed to P3, not P4, because they only exist because of the un-idempotent retry.
+**Platform fees +$17,998.17**
+- P4 contributes +$11,532.69: charge-time fees on the first charge() call for each of the 500 orders. This entire amount is extra — the spec allows only the settlement-time fee.
+- P5 adds +$6,231.71: the uncapped settlement fee over-collects on large orders.
+- P3 adds +$233.73: the charge-time fee postings from the 14 retry calls. P3 owns both sides of each retry fee posting.
+- P2 adds +$0.02: both the charge-time and settle-time fee bases are `chargeDollars` rather than `receiptDollars`, so the fee is slightly higher.
+- P1 is +$0.02: residual IEEE-754 float noise, within cents across 500 orders.
 
-**Clearing account +₦381,632**
-- P3 (+₦1,534,945): each retry credits clearing (`customer → clearing: chargeNaira`) but settle() never runs a second time. The stranded amount is `chargeNaira × 0.985` per retry — already net of the retry charge-time fee, which is attributed to P3's platform_fees column above.
-- P4 (−₦1,153,313): charge-time fees on the 500 non-retry orders drain clearing. ₦1,534,945.31 − ₦1,153,312.96 = ₦381,632.35 — the arithmetic closes exactly without a P1 residual term.
+**Clearing account +$3,815.82**
+- P3 (+$15,348.51): the retry posts `customer → clearing: chargeDollars` (+$15,582.24) and `clearing → platform_fees: feeChargeActual` (−$233.73). P3 owns both entries; net = +$15,348.51.
+- P4 (−$11,532.69): charge-time fee drains from the first charge() call on each of the 500 orders. P4 owns both sides of these postings; clearing and platform_fees move by the same amount.
+- Net: +$15,348.51 − $11,532.69 = **+$3,815.82** — matches the baseline exactly, with zero P1 noise.
 
-### Corrected dependency note (replaces Phase 2)
+### Dependency note
 
-The Phase 2 note stated that P4 alone leaves clearing negative by one fee per order, which is correct for a single isolated non-retry payment. What it missed is that the simulation exercises two distinct bugs simultaneously, and they must be attributed without double-counting:
+1. **P3 (missing idempotency)** contributes **+$15,348.51** to clearing: the retry credit (+$15,582.24) minus the retry's own charge-time fee drain (−$233.73), both owned by P3.
+2. **P4 (double fee)** contributes **−$11,532.69** to clearing: charge-time fee drains on the 500 first-call charge() postings. P4 is a pure transfer: platform_fees and clearing move by the same amount in opposite directions.
 
-1. **P3 (missing idempotency)** contributes **+₦1,534,945** to clearing: each retry posts `customer → clearing: chargeNaira` but settle() runs only once. The stranded credit per retry is `chargeNaira × 0.985` (the retry charge-time fee of `chargeNaira × 0.015` leaves clearing immediately, so P3's clearing share is already net of that fee).
-2. **P4 (double fee)** contributes **−₦1,153,312.96** to clearing: the charge-time fee on each of the 500 non-retry orders drains clearing. The 14 retry charge-time fees are excluded here because they are already accounted for inside P3's stranded-credit calculation above.
-
-Net: ₦1,534,945.31 − ₦1,153,312.96 = **₦381,632.35** — which matches the simulation exactly, with no residual term needed. Neither effect cancels the other. Fixing P4 alone removes the drain and pushes clearing further positive; fixing P3 alone removes the stranded credits and pushes clearing negative. Both must be fixed together for clearing to return to zero.
+Fixing P4 alone removes the drain and pushes clearing further positive; fixing P3 alone removes the stranded credits and pushes clearing negative. Both must be fixed together for clearing to return to zero.
 
 ---
 
 ## Summary for the finance manager
 
-Seven bugs were found across the four source files and **every rule in the fee schedule is violated**. Running 500 simulated orders (14 retries, 41 refund requests) produces a total discrepancy of ₦4,363,020.
+Seven bugs were found across the four source files and **most rules in the fee schedule are violated**. Running 500 simulated orders (14 retries, 41 refund requests) against the fully buggy original code produces a total discrepancy of **$43,627.98**.
 
-The two most damaging bugs by naira impact are: **(P3) missing idempotency**, where a network retry causes the customer to be charged twice — 14 retries in 500 orders inflated customer billings by ₦1.56 million and left ₦1.53 million stranded in clearing with no way to reconcile; and **(P4) double fees**, where the platform fee is deducted from clearing at both the charge step and the settlement step, causing the platform to overcollect ₦1.18 million and leaving clearing ₦1.18 million short on every settled payment.
+The two most damaging bugs by dollar impact are: **(P3) missing idempotency**, where a network retry causes the customer to be charged twice — 14 retries in 500 orders inflated customer billings by $15,582.24, over-credited platform_fees by $233.73 (retry charge-time fees), and left $15,348.51 net stranded in clearing; and **(P4) double fees**, where a charge-time fee is posted on every first charge() call when the spec allows only one fee at settlement — 500 illegitimate postings drain $11,532.69 from clearing to platform_fees (a pure transfer, both sides equal).
 
-Also significant: **(P5) the ₦2,000 fee cap is never applied**, which caused merchants to be underpaid by ₦623,190 on large orders; and **(P6) refunds are not capped**, which allowed ₦257,721 in excess refunds to be paid out of merchant accounts. Two controls are entirely absent — no idempotency check and no refund limit. The float-money (P1) and rounding-drift (P2) bugs are contractual violations but have negligible naira impact at this order volume.
+Also significant: **(P5) the $20 fee cap is never applied**, which caused merchants to be underpaid by $6,231.71 on large orders; and **(P6) refunds are not capped**, which allowed $2,577.08 in excess refunds to be paid out of merchant accounts. Two controls are entirely absent — no idempotency check and no refund limit. P2 and P1 are contractual violations with small dollar impact ($0.59 overcharge to customers and $0.03 shortfall to merchants).
 
 ---
 

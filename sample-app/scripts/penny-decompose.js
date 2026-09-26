@@ -2,7 +2,7 @@
  * penny-decompose.js
  *
  * Replays the identical simulated day (seed=42, 500 orders) and measures the
- * dollars impact of each finding on every account.
+ * dollar impact of each finding on every account.
  *
  * Sign convention: positive = account balance increases (gains money).
  * The "difference" columns therefore match simulate-day.js: actual − expected.
@@ -11,7 +11,7 @@
  *   P2  Rounding drift       – chargeTotal vs receiptTotal divergence
  *   P3  Missing idempotency  – retry creates a second charge posting
  *   P4  Double fees          – charge-time fee posting should not exist
- *   P5  Missing cap          – settle fee not capped at $2,000
+ *   P5  Missing cap          – settle fee not capped at $20
  *   P6  Over refund          – refund allowed to exceed original charge
  *   P1  Float noise          – residual IEEE-754 accumulation
  */
@@ -28,12 +28,12 @@ const rand = () => {
 };
 const pick = (arr) => arr[Math.floor(rand() * arr.length)];
 
-const PRICES    = [150, 499.99, 1250.5, 2999.99, 7500, 18999.95, 45000, 129999.99];
+const PRICES    = [1.5, 4.99, 12.5, 29.99, 75, 189.95, 450, 1299.99];
 const CUSTOMERS = Array.from({ length: 40 }, (_, i) => `customer_${i + 1}`);
-const MERCHANTS = ['merchant_ada_foods', 'merchant_eko_gadgets', 'merchant_jos_textiles'];
+const MERCHANTS = ['merchant_harbor_foods', 'merchant_summit_gadgets', 'merchant_northgate_textiles'];
 const ORDERS    = 500;
 const FEE_RATE  = 0.015;
-const FEE_CAP   = 2000; // dollars
+const FEE_CAP   = 20; // dollars ($20 cap = 2000 cents, per Rule 3)
 
 const toCents = (dollars) => Math.round(dollars * 100);
 
@@ -70,7 +70,7 @@ for (let n = 1; n <= ORDERS; n++) {
   // spec-correct values (integer cents arithmetic)
   const subtotalCents = items.reduce((s, i) => s + toCents(i.unitPrice) * i.qty, 0);
   const receiptCents  = Math.round((subtotalCents * 1075) / 1000);
-  const feeCents      = Math.min(Math.round((receiptCents * 15) / 1000), 200000);
+  const feeCents      = Math.min(Math.round((receiptCents * 15) / 1000), 2000);
   const receiptDollars = receiptCents / 100;
   const feeCapped    = feeCents / 100;
 

@@ -9,7 +9,7 @@
 | File | Role |
 |------|------|
 | `src/config.js` | Rate constants |
-| `src/invoice.js` | Subtotal, VAT, charge total |
+| `src/invoice.js` | Subtotal, sales tax, charge total |
 | `src/payments.js` | Charge, settle, refund orchestration |
 | `src/ledger.js` | Double-entry ledger (in-memory) |
 
@@ -19,46 +19,44 @@
 
 | Name | Value | Used for |
 |------|-------|----------|
-| `VAT_RATE` | `0.075` (7.5 %) | Applied to each line-item or to the subtotal when building the charge total |
+| `VAT_RATE` | `0.075` (7.5 %) | Applied to the subtotal when building the charge total |
 | `FEE_RATE` | `0.015` (1.5 %) | Platform processing / settlement fee |
 
 ---
 
 ## 3. Number types
 
-Every value is a plain JavaScript `number` (IEEE-754 double-precision float).  
-No integer-kobo / integer-cent representation is used anywhere.  
-The only helper that limits precision is `round2` in `invoice.js`:
-
-```js
-// invoice.js line 3
-const round2 = (n) => Math.round(n * 100) / 100;
-```
+Every monetary value is a plain JavaScript `number` (IEEE-754 double-precision float) at the service boundary.
+The ledger (`src/ledger.js`) converts incoming dollar amounts to whole cents via `Math.round(amount * 100)` before storing, and divides by 100 on `balance()` reads.
+`src/invoice.js` computes the sales-tax total in integer cents internally and returns dollars.
 
 ---
 
 ## 4. Invoice calculation (`src/invoice.js`)
 
-### 4a. `subtotal(items)` — lines 5–7
+### 4a. `subtotal(items)` — lines 3–5
 ```
 subtotal = Σ (item.unitPrice × item.qty)
 ```
 - Raw float multiplication; no rounding.
 
-### 4b. `receiptTotal(items)` — lines 9–11
+### 4b. `receiptTotal(items)` — lines 16–18
 ```
-receiptTotal = round2( subtotal × 1.075 )
+subtotalCents = Math.round( subtotal × 100 )
+totalCents    = Math.round( subtotalCents × 1.075 )
+receiptTotal  = totalCents / 100
 ```
-- VAT applied **once** to the whole subtotal, then rounded to 2 d.p.
+- Sales tax applied once to the whole subtotal, rounded once in whole cents.
 - Used for display / receipt purposes.
 
-### 4c. `chargeTotal(items)` — lines 13–15
+### 4c. `chargeTotal(items)` — lines 13–15 (original)
 ```
 chargeTotal = Σ round2( item.unitPrice × item.qty × 1.075 )
 ```
-- VAT applied and rounded **per line-item**, then summed.
+- Sales tax applied and rounded **per line-item**, then summed.
 - This is the value passed to `PaymentService.charge()` as `amount`.
-- **Note:** `chargeTotal` and `receiptTotal` can differ when there are multiple items (different rounding paths).
+- **Note:** `chargeTotal` and `receiptTotal` can differ when there are multiple items (different rounding paths). This is the P2 rounding-drift bug.
+- **P2 fix (Phase 4):** `chargeTotal` was changed to call the same `totalWithVat(items)` function as `receiptTotal`. Both now compute sales tax once on the whole subtotal, rounded once in whole cents. The two paths are equal for any input.
 
 ---
 
@@ -67,8 +65,8 @@ chargeTotal = Σ round2( item.unitPrice × item.qty × 1.075 )
 **Input:** `{ paymentId, customer, merchant, items, idempotencyKey }`
 
 ```
-amount = chargeTotal(items)          // per-line-item rounded float
-fee    = amount × 0.015              // raw float, never rounded
+amount = chargeTotal(items)          // whole-cent-rounded dollars
+fee    = amount × 0.015              // raw float, not rounded or capped
 ```
 
 **Ledger postings:**
@@ -90,7 +88,7 @@ fee    = amount × 0.015              // raw float, never rounded
 **Input:** `paymentId`
 
 ```
-fee     = p.amount × 0.015          // recomputed from stored amount; raw float
+fee     = p.amount × 0.015          // recomputed from stored amount; raw float, no cap
 payout  = p.amount - fee
 ```
 
@@ -129,8 +127,9 @@ p.refunded += amount
 ## 8. Ledger (`src/ledger.js`)
 
 - In-memory `entries` array; no persistence.
-- `post()` appends `{ ref, from, to, amount, memo, seq }` — all fields are caller-supplied floats.
-- `balance(account)` sums `to` credits minus `from` debits (plain float arithmetic; no rounding).
+- `post()` converts dollars to whole cents via `Math.round(amount * 100)` and stores `{ ref, from, to, amountCents, memo, seq }`.
+- `balance(account)` sums `to` credits minus `from` debits in cents, then divides by 100 to return dollars.
+- `balanceCents(account)` returns the same sum as an integer number of cents.
 - `accounts()` returns the set of all account names that have ever appeared in a posting.
 
 ---
@@ -151,6 +150,7 @@ p.refunded += amount
 ```
 customer pays:         amount = chargeTotal(items)
                        fee_charge = amount × 0.015
+                       (stored as whole cents in ledger)
 
 [1] customer ──amount──────────────▶ clearing
 [2] clearing ──fee_charge───────────▶ platform_fees
