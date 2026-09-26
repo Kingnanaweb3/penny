@@ -23,10 +23,12 @@ test('charge returns a positive amount', () => {
   assert.ok(r.amount > 0);
 });
 
-test('fee is 1.5 percent of the charge', () => {
+test('fee is capped at $20 for orders above the cap threshold', () => {
+  // order: unitPrice $1,000 × qty 2 → amount $2,150.00, which exceeds the $20 cap.
+  // After P5 fix, charge() returns the capped fee ($20.00), not amount × 1.5% ($32.25).
   const { svc } = setup();
   const r = svc.charge(order);
-  assert.equal(r.fee, r.amount * 0.015);
+  assert.equal(r.fee, 20);
 });
 
 test('receipt includes 7.5 percent VAT', () => {

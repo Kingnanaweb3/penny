@@ -1,4 +1,4 @@
-import { FEE_RATE } from './config.js';
+import { FEE_RATE, FEE_CAP_CENTS } from './config.js';
 import { chargeTotal } from './invoice.js';
 
 export class PaymentService {
@@ -20,7 +20,8 @@ export class PaymentService {
     // Rule 4: fee is taken exactly once, at settlement — no charge-time fee posting.
 
     this.payments.set(paymentId, { paymentId, customer, merchant, amount, idempotencyKey, refunded: 0, settled: false });
-    const result = { paymentId, amount, fee: amount * FEE_RATE };
+    const feeCents = Math.min(Math.round(Math.round(amount * 100) * FEE_RATE), FEE_CAP_CENTS);
+    const result = { paymentId, amount, fee: feeCents / 100 };
     if (idempotencyKey) this.idempotencyKeys.set(idempotencyKey, result);
     return result;
   }
@@ -32,7 +33,8 @@ export class PaymentService {
     // Compute fee and payout in whole cents so feeCents + payoutCents = amountCents exactly.
     // This guarantees clearing nets to zero after settlement (Rule 7).
     const amountCents = Math.round(p.amount * 100);
-    const feeCents    = Math.round(amountCents * FEE_RATE);
+    // Rule 3: fee capped at FEE_CAP_CENTS ($20.00).
+    const feeCents    = Math.min(Math.round(amountCents * FEE_RATE), FEE_CAP_CENTS);
     const payoutCents = amountCents - feeCents;
 
     this.ledger.post({ ref: paymentId, from: 'clearing', to: 'platform_fees', amount: feeCents / 100, memo: 'settlement fee' });
