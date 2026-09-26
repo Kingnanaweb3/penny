@@ -4,16 +4,30 @@ export class Ledger {
   }
 
   post({ ref, from, to, amount, memo = '' }) {
-    this.entries.push({ ref, from, to, amount, memo, seq: this.entries.length + 1 });
+    // Convert naira to whole kobo (integer) on entry. Math.round avoids
+    // IEEE-754 drift (e.g. 1612.4999999... rounds to 1612, not truncates).
+    const amountKobo = Math.round(amount * 100);
+    this.entries.push({ ref, from, to, amountKobo, memo, seq: this.entries.length + 1 });
   }
 
+  // Public interface: returns naira (for callers that expect naira).
   balance(account) {
-    let total = 0;
+    let totalKobo = 0;
     for (const e of this.entries) {
-      if (e.to === account) total += e.amount;
-      if (e.from === account) total -= e.amount;
+      if (e.to   === account) totalKobo += e.amountKobo;
+      if (e.from === account) totalKobo -= e.amountKobo;
     }
-    return total;
+    return totalKobo / 100;
+  }
+
+  // Returns the balance as an integer number of kobo.
+  balanceKobo(account) {
+    let totalKobo = 0;
+    for (const e of this.entries) {
+      if (e.to   === account) totalKobo += e.amountKobo;
+      if (e.from === account) totalKobo -= e.amountKobo;
+    }
+    return totalKobo;
   }
 
   accounts() {
