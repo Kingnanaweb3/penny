@@ -12,3 +12,5 @@
 ## Notes on existing tests
 
 `tests/payments.test.js` — the test `"fee is 1.5 percent of the charge"` was updated to `"fee is capped at $20 for orders above the cap threshold"` and its assertion changed from `r.fee === r.amount * 0.015` to `r.fee === 20`. **Reason:** the test order (`unitPrice: $1,000 × qty 2`) produces an amount of $2,150.00, whose uncapped fee would be $32.25 — above the $20 cap. After the P5 fix, `charge()` correctly returns the capped fee of $20.00. The old assertion `r.amount * 0.015 = $32.25` was asserting the buggy uncapped behavior. The test name and assertion were both updated to reflect the correct spec.
+
+| P7 Clearing never zero | tests/penny/p7-clearing-zero.test.js | Resolved by P3 and P4. Regression test passed on its first run (3 passing), so no failing step exists to show. |
