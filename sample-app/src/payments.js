@@ -15,13 +15,12 @@ export class PaymentService {
     }
 
     const amount = chargeTotal(items);
-    const fee = amount * FEE_RATE;
 
     this.ledger.post({ ref: paymentId, from: customer, to: 'clearing', amount, memo: 'charge' });
-    this.ledger.post({ ref: paymentId, from: 'clearing', to: 'platform_fees', amount: fee, memo: 'processing fee' });
+    // Rule 4: fee is taken exactly once, at settlement — no charge-time fee posting.
 
-    this.payments.set(paymentId, { paymentId, customer, merchant, amount, fee, idempotencyKey, refunded: 0, settled: false });
-    const result = { paymentId, amount, fee };
+    this.payments.set(paymentId, { paymentId, customer, merchant, amount, idempotencyKey, refunded: 0, settled: false });
+    const result = { paymentId, amount, fee: amount * FEE_RATE };
     if (idempotencyKey) this.idempotencyKeys.set(idempotencyKey, result);
     return result;
   }
@@ -30,9 +29,14 @@ export class PaymentService {
     const p = this.payments.get(paymentId);
     if (!p) throw new Error(`Unknown payment ${paymentId}`);
 
-    const fee = p.amount * FEE_RATE;
-    this.ledger.post({ ref: paymentId, from: 'clearing', to: 'platform_fees', amount: fee, memo: 'settlement fee' });
-    this.ledger.post({ ref: paymentId, from: 'clearing', to: p.merchant, amount: p.amount - fee, memo: 'merchant payout' });
+    // Compute fee and payout in whole cents so feeCents + payoutCents = amountCents exactly.
+    // This guarantees clearing nets to zero after settlement (Rule 7).
+    const amountCents = Math.round(p.amount * 100);
+    const feeCents    = Math.round(amountCents * FEE_RATE);
+    const payoutCents = amountCents - feeCents;
+
+    this.ledger.post({ ref: paymentId, from: 'clearing', to: 'platform_fees', amount: feeCents / 100, memo: 'settlement fee' });
+    this.ledger.post({ ref: paymentId, from: 'clearing', to: p.merchant, amount: payoutCents / 100, memo: 'merchant payout' });
     p.settled = true;
   }
 

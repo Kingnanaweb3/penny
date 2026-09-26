@@ -161,6 +161,79 @@
         </div>
       </div>
     </section>
+    <section class="s findings" id="findings" aria-labelledby="findings-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <span class="chip-label">Findings</span>
+            <h2 id="findings-title">Seven findings. Every one proven.</h2>
+            <p class="sub">From Penny's audit of ShopLedger, a sample payments app with deliberately seeded bugs, over one simulated day of 500 orders.</p>
+          </div>
+          <a class="explore" href="https://github.com/Kingnanaweb3/penny/blob/main/penny-report/03-findings.md" target="_blank" rel="noopener">Explore <span aria-hidden="true">&rsaquo;</span></a>
+        </div>
+
+        <div class="fnd r">
+          <div class="picker-panel">
+            <ul class="picker" id="picker" role="listbox" aria-label="Findings">
+              <li role="option" data-i="0"><span class="pid mono">P1</span>Float money</li>
+              <li role="option" data-i="1"><span class="pid mono">P2</span>Rounding drift</li>
+              <li role="option" data-i="2"><span class="pid mono">P3</span>Retries charged twice</li>
+              <li role="option" data-i="3"><span class="pid mono">P4</span>Fee taken twice</li>
+              <li role="option" data-i="4"><span class="pid mono">P5</span>Fee cap missing</li>
+              <li role="option" data-i="5"><span class="pid mono">P6</span>Refunds over the charge</li>
+              <li role="option" data-i="6"><span class="pid mono">P7</span>Clearing never zero</li>
+            </ul>
+          </div>
+
+          <div class="fnd-side">
+            <div class="detail" id="detail" aria-live="polite">
+              <div class="d-head"><span class="d-id mono" id="d-id">P3</span><span id="d-title">Retries charged twice</span><b class="sev" id="d-sev">Critical</b></div>
+              <p id="d-desc">A retried charge with the same idempotency key debited the customer a second time.</p>
+              <dl>
+                <div><dt>Rule broken</dt><dd id="d-rule">Rule 5</dd></div>
+                <div><dt>Impact, one day</dt><dd class="num" id="d-imp">$15,582.24</dd></div>
+                <div><dt>Who loses</dt><dd id="d-who">Customers</dd></div>
+              </dl>
+            </div>
+            <ul class="feats">
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>Graded by dollar impact, not by guesswork</li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Each one proven by a failing test before the fix</li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Cited to a rule, a file and a line</li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h18M3 6h18M3 18h12"/></svg>Split per account, adding up to the cent</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="s bob-band" id="bob" aria-labelledby="bob-title">
+      <div class="wrap">
+        <div class="sec-top r">
+          <div>
+            <h2 id="bob-title">Built into IBM Bob, not bolted on.</h2>
+            <p class="sub">Penny is not a script that calls Bob. She is Bob, shaped by a custom mode, her own rules and five skills, working in your repository.</p>
+          </div>
+          <a class="explore" href="https://github.com/Kingnanaweb3/penny/tree/main/.bob" target="_blank" rel="noopener">Explore <span aria-hidden="true">&rsaquo;</span></a>
+        </div>
+
+        <div class="hub r" aria-hidden="true">
+          <div class="node n-top">Custom mode</div>
+          <div class="node n-left">Mode rules</div>
+          <div class="core"><span>Penny</span></div>
+          <div class="node n-right">Five skills</div>
+          <div class="node n-bottom">Reads documents</div>
+        </div>
+
+        <div class="hub-legend r">
+          <div><b>Custom mode</b><p>A Bob mode with her own role, five phases, and tool access limited to reading, editing and running tests.</p></div>
+          <div><b>Mode rules</b><p>Active only in Penny mode. She may never edit the fee schedule, and every fix needs a failing test first.</p></div>
+          <div><b>Five skills</b><p>One per phase: map the money, check the rules, hunt, prove and fix, trial balance.</p></div>
+          <div><b>Reads documents</b><p>Penny reads the written fee schedule and checks the code against every rule in it.</p></div>
+        </div>
+      </div>
+    </section>
+
+
 
     <div class="next" id="audit"></div>
   </main>
