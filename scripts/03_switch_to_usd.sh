@@ -1,3 +1,63 @@
+#!/usr/bin/env bash
+# Switches ShopLedger and Penny from naira/kobo to dollars/cents.
+# Usage: bash scripts/03_switch_to_usd.sh        (converts this repo)
+#        bash scripts/03_switch_to_usd.sh DIR    (converts DIR/sample-app only, used by 04)
+set -euo pipefail
+
+ROOT="${1:-.}"
+APP="$ROOT/sample-app"
+
+if [ ! -d "$APP/src" ]; then
+  echo "Could not find $APP/src. Run this from the penny folder."
+  exit 1
+fi
+
+# Word swaps for code, tests and Penny's instructions.
+swap() {
+  perl -pi -e '
+    s/balanceKobo/balanceCents/g;
+    s/KOBO/CENTS/g; s/Kobo/Cents/g; s/kobo/cents/g;
+    s/NAIRA/DOLLARS/g; s/Naira/Dollars/g; s/naira/dollars/g;
+    s/\x{20A6}/\$/g; s/\xE2\x82\xA6/\$/g;
+    s/NGN/USD/g;
+  ' "$@"
+}
+
+# 1. App code and tests
+find "$APP/src" "$APP/tests" -type f -name "*.js" -print0 | xargs -0 -r perl -pi -e '
+  s/balanceKobo/balanceCents/g;
+  s/KOBO/CENTS/g; s/Kobo/Cents/g; s/kobo/cents/g;
+  s/NAIRA/DOLLARS/g; s/Naira/Dollars/g; s/naira/dollars/g;
+  s/\xE2\x82\xA6/\$/g; s/NGN/USD/g;
+'
+
+# Penny's own decompose script, if it exists (Penny must still update its prices and cap)
+if [ -f "$APP/scripts/penny-decompose.js" ]; then
+  perl -pi -e '
+    s/balanceKobo/balanceCents/g;
+    s/KOBO/CENTS/g; s/Kobo/Cents/g; s/kobo/cents/g;
+    s/NAIRA/DOLLARS/g; s/Naira/Dollars/g; s/naira/dollars/g;
+    s/\xE2\x82\xA6/\$/g; s/NGN/USD/g;
+  ' "$APP/scripts/penny-decompose.js"
+fi
+
+# 2. Fee schedule in dollars
+cat > "$APP/docs/fee-schedule.md" << 'EOF'
+# ShopLedger Fee Schedule and Money Rules
+
+Effective for all merchants on the ShopLedger platform.
+
+1. All money is stored and calculated in whole cents (1 dollar = 100 cents). No fractional cents.
+2. Sales tax is 7.5 percent, calculated once on the invoice subtotal and rounded once to the nearest cent. The amount charged must equal the amount shown on the customer receipt.
+3. The platform fee is 1.5 percent of the charged amount, capped at 20 dollars per transaction.
+4. The platform fee is taken exactly once, at settlement.
+5. A charge retried with the same idempotency key must not create a second charge.
+6. Total refunds on a payment may never exceed the amount charged.
+7. After settlement, the clearing account balance for a payment must be zero.
+EOF
+
+# 3. Finance team's reconciliation in dollars
+cat > "$APP/scripts/simulate-day.js" << 'EOF'
 import { Ledger } from '../src/ledger.js';
 import { PaymentService } from '../src/payments.js';
 
@@ -91,3 +151,17 @@ for (const [name, exp, act] of rows) {
 console.log('-'.repeat(90));
 console.log(gap < 0.005 ? 'Books balance.' : `Books are off. Total discrepancy: USD ${gap.toFixed(2)}`);
 console.log('');
+EOF
+
+# 4. Penny's mode, rules and skills (only when converting the real repo)
+if [ "$ROOT" = "." ] && [ -d ".bob" ]; then
+  find .bob -type f \( -name "*.md" -o -name "*.yaml" \) -print0 | xargs -0 -r perl -pi -e '
+    s/balanceKobo/balanceCents/g;
+    s/KOBO/CENTS/g; s/Kobo/Cents/g; s/kobo/cents/g;
+    s/NAIRA/DOLLARS/g; s/Naira/Dollars/g; s/naira/dollars/g;
+    s/\xE2\x82\xA6/\$/g; s/NGN/USD/g;
+  '
+  echo "Updated Penny mode, rules and skills to dollars and cents."
+fi
+
+echo "Converted $APP to dollars and cents."

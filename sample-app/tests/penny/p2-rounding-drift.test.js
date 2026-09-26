@@ -50,6 +50,6 @@ test('P2: chargeTotal equals receiptTotal (Rule 2 — no rounding drift)', () =>
   assert.equal(
     charge,
     receipt,
-    `chargeTotal (₦${charge.toFixed(2)}) must equal receiptTotal (₦${receipt.toFixed(2)}); drift = ₦${(charge - receipt).toFixed(2)}`
+    `chargeTotal ($${charge.toFixed(2)}) must equal receiptTotal ($${receipt.toFixed(2)}); drift = $${(charge - receipt).toFixed(2)}`
   );
 });

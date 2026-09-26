@@ -10,7 +10,7 @@ description: Map every place a payments codebase creates, moves, rounds, convert
 3. For every step record:
    - file and line
    - what money moves, from which account, to which account
-   - the number type used (float naira, integer kobo, other)
+   - the number type used (float dollars, integer cents, other)
    - any rounding, and where it happens
 4. Draw the flow as a Mermaid diagram showing accounts as boxes and postings as arrows.
 5. Write everything to penny-report/01-money-map.md.

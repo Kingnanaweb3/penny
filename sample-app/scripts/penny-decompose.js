@@ -2,7 +2,7 @@
  * penny-decompose.js
  *
  * Replays the identical simulated day (seed=42, 500 orders) and measures the
- * naira impact of each finding on every account.
+ * dollars impact of each finding on every account.
  *
  * Sign convention: positive = account balance increases (gains money).
  * The "difference" columns therefore match simulate-day.js: actual − expected.
@@ -11,7 +11,7 @@
  *   P2  Rounding drift       – chargeTotal vs receiptTotal divergence
  *   P3  Missing idempotency  – retry creates a second charge posting
  *   P4  Double fees          – charge-time fee posting should not exist
- *   P5  Missing cap          – settle fee not capped at ₦2,000
+ *   P5  Missing cap          – settle fee not capped at $2,000
  *   P6  Over refund          – refund allowed to exceed original charge
  *   P1  Float noise          – residual IEEE-754 accumulation
  */
@@ -33,15 +33,15 @@ const CUSTOMERS = Array.from({ length: 40 }, (_, i) => `customer_${i + 1}`);
 const MERCHANTS = ['merchant_ada_foods', 'merchant_eko_gadgets', 'merchant_jos_textiles'];
 const ORDERS    = 500;
 const FEE_RATE  = 0.015;
-const FEE_CAP   = 2000; // naira
+const FEE_CAP   = 2000; // dollars
 
-const toKobo = (naira) => Math.round(naira * 100);
+const toCents = (dollars) => Math.round(dollars * 100);
 
 // ── live ledger (ground truth for actual balances) ───────────────────────────
 const ledger = new Ledger();
 const svc    = new PaymentService(ledger);
 
-// ── per-finding impact accumulators (naira, positive = account gains) ────────
+// ── per-finding impact accumulators (dollars, positive = account gains) ────────
 const impact = {
   customers:     { P2: 0, P3: 0, P4: 0, P5: 0, P6: 0 },
   merchants:     { P2: 0, P3: 0, P4: 0, P5: 0, P6: 0 },
@@ -67,15 +67,15 @@ for (let n = 1; n <= ORDERS; n++) {
     idempotencyKey: `idem_${paymentId}`,
   };
 
-  // spec-correct values (integer kobo arithmetic)
-  const subtotalKobo = items.reduce((s, i) => s + toKobo(i.unitPrice) * i.qty, 0);
-  const receiptKobo  = Math.round((subtotalKobo * 1075) / 1000);
-  const feeKobo      = Math.min(Math.round((receiptKobo * 15) / 1000), 200000);
-  const receiptNaira = receiptKobo / 100;
-  const feeCapped    = feeKobo / 100;
+  // spec-correct values (integer cents arithmetic)
+  const subtotalCents = items.reduce((s, i) => s + toCents(i.unitPrice) * i.qty, 0);
+  const receiptCents  = Math.round((subtotalCents * 1075) / 1000);
+  const feeCents      = Math.min(Math.round((receiptCents * 15) / 1000), 200000);
+  const receiptDollars = receiptCents / 100;
+  const feeCapped    = feeCents / 100;
 
   // what chargeTotal() actually returns (per-line VAT rounding)
-  const chargeNaira  = chargeTotal(items);
+  const chargeDollars  = chargeTotal(items);
 
   // ── run through the live service (identical sequence to simulate-day.js) ─
   svc.charge(order);
@@ -84,27 +84,27 @@ for (let n = 1; n <= ORDERS; n++) {
   svc.settle(paymentId);
 
   // ── refunds ──────────────────────────────────────────────────────────────
-  let actualRefundNaira   = 0;
-  let expectedRefundNaira = 0;
-  let refundedKoboSoFar   = 0;
+  let actualRefundDollars   = 0;
+  let expectedRefundDollars = 0;
+  let refundedCentsSoFar   = 0;
 
   if (rand() < 0.06) {
     const requests = rand() < 0.35 ? 2 : 1;
-    const reqKobo  = Math.round(receiptKobo * 0.6);
+    const reqCents  = Math.round(receiptCents * 0.6);
 
     for (let r = 0; r < requests; r++) {
-      svc.refund(paymentId, reqKobo / 100);
-      actualRefundNaira += reqKobo / 100;
+      svc.refund(paymentId, reqCents / 100);
+      actualRefundDollars += reqCents / 100;
       // simulate-day.js expected tracker caps each request
-      const cappedKobo    = Math.min(reqKobo, receiptKobo - refundedKoboSoFar);
-      expectedRefundNaira += cappedKobo / 100;
-      refundedKoboSoFar   += cappedKobo;
+      const cappedCents    = Math.min(reqCents, receiptCents - refundedCentsSoFar);
+      expectedRefundDollars += cappedCents / 100;
+      refundedCentsSoFar   += cappedCents;
     }
   }
 
   // ── expected totals ───────────────────────────────────────────────────────
-  expCustomers += receiptNaira  - expectedRefundNaira;
-  expMerchants += receiptNaira  - feeCapped - expectedRefundNaira;
+  expCustomers += receiptDollars  - expectedRefundDollars;
+  expMerchants += receiptDollars  - feeCapped - expectedRefundDollars;
   expFees      += feeCapped;
 
   // ── attribute per-finding impacts ─────────────────────────────────────────
@@ -117,8 +117,8 @@ for (let n = 1; n <= ORDERS; n++) {
   // finding net to zero (money is conserved within each bug).
 
   const chargeRuns     = isRetry ? 2 : 1;
-  const feeChargeActual = chargeNaira * FEE_RATE;   // charge-time fee per charge() call
-  const feeSettleActual = chargeNaira * FEE_RATE;   // settle() recomputes; p.amount=chargeNaira
+  const feeChargeActual = chargeDollars * FEE_RATE;   // charge-time fee per charge() call
+  const feeSettleActual = chargeDollars * FEE_RATE;   // settle() recomputes; p.amount=chargeDollars
 
   // ── Sign convention for impact[][] ───────────────────────────────────────
   // positive = the account's sim-diff value goes up (actual > expected for that account).
@@ -130,14 +130,14 @@ for (let n = 1; n <= ORDERS; n++) {
 
   // ── P2: rounding drift ────────────────────────────────────────────────────
   // chargeTotal() rounds VAT per line item; receiptTotal() (correct) rounds once on subtotal.
-  // drift = chargeNaira − receiptNaira  (the excess customers are billed per charge run)
-  // Customers: pay chargeNaira instead of receiptNaira → net outflow increases by drift×chargeRuns
+  // drift = chargeDollars − receiptDollars  (the excess customers are billed per charge run)
+  // Customers: pay chargeDollars instead of receiptDollars → net outflow increases by drift×chargeRuns
   // Clearing:  drift flows in from customer and back out via fee+payout → nets to zero
-  // Platform:  fee base is chargeNaira not receiptNaira, so fee is higher by drift×FEE_RATE
+  // Platform:  fee base is chargeDollars not receiptDollars, so fee is higher by drift×FEE_RATE
   //            (applies to both the charge-time fee and the settle-time fee)
-  // Merchant:  payout = chargeNaira×(1−FEE_RATE) not receiptNaira×(1−FEE_RATE) → gains drift×(1−FEE_RATE)
+  // Merchant:  payout = chargeDollars×(1−FEE_RATE) not receiptDollars×(1−FEE_RATE) → gains drift×(1−FEE_RATE)
   {
-    const drift = chargeNaira - receiptNaira;
+    const drift = chargeDollars - receiptDollars;
     impact.customers.P2      += drift * chargeRuns;              // extra outflow (actual > expected)
     impact.clearing.P2       += 0;                               // nets to zero
     impact.platform_fees.P2  += drift * FEE_RATE * chargeRuns   // charge-time fee on drift
@@ -150,19 +150,19 @@ for (let n = 1; n <= ORDERS; n++) {
   }
 
   // ── P3: missing idempotency ───────────────────────────────────────────────
-  // A retry posts: customer→clearing: chargeNaira AND clearing→platform_fees: feeChargeActual.
+  // A retry posts: customer→clearing: chargeDollars AND clearing→platform_fees: feeChargeActual.
   // settle() runs only once, so the retry credit (minus fee) is stranded in clearing.
-  // Customers: extra net outflow of chargeNaira (actual > expected → positive)
-  // Clearing:  gains chargeNaira×(1−FEE_RATE) that never leaves (positive)
+  // Customers: extra net outflow of chargeDollars (actual > expected → positive)
+  // Clearing:  gains chargeDollars×(1−FEE_RATE) that never leaves (positive)
   // Platform:  gains extra feeChargeActual from retry charge posting (positive)
-  // Merchant:  settle payout uses p.amount=chargeNaira (same value), unchanged (zero)
+  // Merchant:  settle payout uses p.amount=chargeDollars (same value), unchanged (zero)
   if (isRetry) {
-    impact.customers.P3      += chargeNaira;                    // extra customer debit
-    impact.clearing.P3       += chargeNaira * (1 - FEE_RATE);  // stranded retry credit net of fee
+    impact.customers.P3      += chargeDollars;                    // extra customer debit
+    impact.clearing.P3       += chargeDollars * (1 - FEE_RATE);  // stranded retry credit net of fee
     impact.platform_fees.P3  += feeChargeActual;                // extra charge-time fee from retry
     impact.merchants.P3      += 0;
-    // conservation: chargeNaira − chargeNaira×(1−FEE_RATE) − feeChargeActual − 0
-    //   = chargeNaira − chargeNaira×0.985 − chargeNaira×0.015 = 0 ✓
+    // conservation: chargeDollars − chargeDollars×(1−FEE_RATE) − feeChargeActual − 0
+    //   = chargeDollars − chargeDollars×0.985 − chargeDollars×0.015 = 0 ✓
   }
 
   // ── P4: double fees (charge-time fee posting should not exist) ───────────
@@ -178,14 +178,14 @@ for (let n = 1; n <= ORDERS; n++) {
   // conservation: 0 − feeChargeActual×chargeRuns + feeChargeActual×chargeRuns + 0 = 0 ✓
 
   // ── P5: missing fee cap ───────────────────────────────────────────────────
-  // settle() uses chargeNaira×FEE_RATE uncapped; correct is min(chargeNaira×FEE_RATE, FEE_CAP).
-  // excessFee = max(0, chargeNaira×FEE_RATE − FEE_CAP)
+  // settle() uses chargeDollars×FEE_RATE uncapped; correct is min(chargeDollars×FEE_RATE, FEE_CAP).
+  // excessFee = max(0, chargeDollars×FEE_RATE − FEE_CAP)
   // Platform: gains excessFee (actual > expected → positive)
-  // Merchant: payout = chargeNaira − feeSettleActual; excess fee reduces payout (actual < expected → negative)
-  // Clearing: the settle pair (fee + payout) always sums to chargeNaira regardless of cap → nets zero
+  // Merchant: payout = chargeDollars − feeSettleActual; excess fee reduces payout (actual < expected → negative)
+  // Clearing: the settle pair (fee + payout) always sums to chargeDollars regardless of cap → nets zero
   // Customer: not directly affected
   {
-    const excessFee = Math.max(0, chargeNaira * FEE_RATE - FEE_CAP);
+    const excessFee = Math.max(0, chargeDollars * FEE_RATE - FEE_CAP);
     impact.platform_fees.P5 += excessFee;
     impact.merchants.P5     -= excessFee;
     impact.clearing.P5      += 0;
@@ -194,14 +194,14 @@ for (let n = 1; n <= ORDERS; n++) {
   }
 
   // ── P6: over refund ───────────────────────────────────────────────────────
-  // code posts refund with no cap; extra = actualRefundNaira − expectedRefundNaira ≥ 0.
+  // code posts refund with no cap; extra = actualRefundDollars − expectedRefundDollars ≥ 0.
   // Extra is paid merchant→customer:
   // Customer: receives more back → net outflow decreases → actual < expected → negative
   // Merchant: pays more out → net inflow decreases → actual < expected → negative
   // (Both are negative because both accounts end up with less than expected.)
   // clearing and platform_fees: unchanged (refund bypasses both)
   {
-    const extra = actualRefundNaira - expectedRefundNaira;
+    const extra = actualRefundDollars - expectedRefundDollars;
     impact.customers.P6     -= extra;   // customer net outflow decreases (actual < expected)
     impact.merchants.P6     -= extra;   // merchant net inflow decreases (actual < expected)
     impact.platform_fees.P6 += 0;
@@ -244,7 +244,7 @@ const r = (n) => Number(n.toFixed(2));
 const fmt = (n, w = 14) => String(r(n)).padStart(w);
 
 console.log('\nShopLedger Penny Decomposition');
-console.log('Naira impact of each finding per account  (positive = account gains, negative = account loses)\n');
+console.log('Dollars impact of each finding per account  (positive = account gains, negative = account loses)\n');
 
 const cols = [...findings, 'P1 noise', 'TOTAL', 'sim-diff', 'residual'];
 const colW = 14;
