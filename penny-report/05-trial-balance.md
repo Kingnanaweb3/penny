@@ -1,6 +1,6 @@
 # Phase 5: Trial Balance
 
-Generated 2026-09-26 23:39 WAT by `scripts/11_trial_balance.sh`.
+Generated 2026-09-27 05:05 WAT by `scripts/11_trial_balance.sh`.
 
 **How this report was made.** The team's 40 Bobcoin budget ran out while Penny was writing the P7 test in Bob, so this final phase was run from the terminal. The script runs the same commands the penny-trial-balance skill specifies and pastes their output here unedited. No number below was typed by hand.
 

@@ -33,7 +33,7 @@ document.querySelectorAll('.r').forEach((el) => io.observe(el));
 
 // ---------- The audit: after value ----------
 // Set this from Penny's Phase 5 trial balance. Leave null until it has actually been observed.
-const AFTER_TOTAL = null; // for example '$0.00'
+const AFTER_TOTAL = '$0.00';
 if (AFTER_TOTAL !== null) {
   const box = document.getElementById('after-box');
   box.classList.remove('pending');
